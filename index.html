@@ -11,69 +11,61 @@
       height: 100vh;
       overflow: hidden;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      background: #000;
     }
 
-    /* Background collage */
+    /* Full-screen collage */
     .collage {
       position: fixed;
       inset: 0;
       z-index: 0;
-      pointer-events: none;
     }
 
     .collage img {
       position: absolute;
-      width: 85px;
-      border-radius: 12px;
+      width: 120px;
+      border-radius: 14px;
       opacity: 0.5;
       object-fit: cover;
-      box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.35);
     }
 
-    /* Center card */
-    .container {
+    /* Overlay content */
+    .overlay {
+      position: relative;
+      z-index: 2;
       height: 100%;
       display: flex;
-      align-items: center;
+      flex-direction: column;
       justify-content: center;
-      position: relative;
-      z-index: 1;
-      padding: 14px;
-    }
-
-    .card {
-      width: 100%;
-      max-width: 330px;
-      background: rgba(255, 255, 255, 0.96);
-      padding: 26px 20px;
-      border-radius: 22px;
+      align-items: center;
+      padding: 20px;
       text-align: center;
-      box-shadow: 0 16px 32px rgba(0,0,0,0.2);
-      backdrop-filter: blur(6px);
+      color: white;
+      backdrop-filter: blur(2px);
     }
 
     h1 {
-      font-size: 1.45rem;
-      color: #ff4d6d;
+      font-size: 1.6rem;
       margin: 8px 0;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.6);
     }
 
     p {
-      font-size: 0.95rem;
-      color: #555;
-      margin-bottom: 12px;
+      font-size: 1rem;
+      margin-bottom: 10px;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.6);
     }
 
     .buttons {
       position: relative;
-      height: 110px;
-      margin-top: 16px;
+      margin-top: 20px;
+      height: 120px;
     }
 
     button {
-      padding: 12px 22px;
-      font-size: 0.95rem;
+      padding: 14px 26px;
+      font-size: 1rem;
       border-radius: 999px;
       border: none;
       cursor: pointer;
@@ -89,10 +81,10 @@
     }
 
     #noBtn {
-      background: #e5e5e5;
+      background: #ffffffcc;
       color: #333;
       position: absolute;
-      left: 130px;
+      left: 140px;
     }
 
     #cuteBtn {
@@ -100,7 +92,7 @@
       background: #ffd6e0;
       color: #ff4d6d;
       position: absolute;
-      top: 55px;
+      top: 60px;
       left: 50%;
       transform: translateX(-50%);
       animation: pop 0.3s ease;
@@ -112,10 +104,10 @@
     }
 
     .message {
-      margin-top: 18px;
-      font-size: 1.05rem;
-      color: #ff4d6d;
+      margin-top: 22px;
+      font-size: 1.1rem;
       font-weight: 600;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.6);
     }
   </style>
 </head>
@@ -125,25 +117,22 @@
   <!-- Background collage -->
   <div class="collage" id="collage"></div>
 
-  <!-- Card -->
-  <div class="container">
-    <div class="card">
-      <h1>Hey you 💕</h1>
-      <p>I was wondering…</p>
-      <h1>Will you be my Valentine? 🌹</h1>
+  <!-- Floating content -->
+  <div class="overlay">
+    <h1>Hey you 💕</h1>
+    <p>I was wondering…</p>
+    <h1>Will you be my Valentine? 🌹</h1>
 
-      <div class="buttons">
-        <button id="yesBtn">Yes 💖</button>
-        <button id="noBtn">No 🙈</button>
-        <button id="cuteBtn">Wait… are you sure? 🥺</button>
-      </div>
-
-      <div class="message" id="message"></div>
+    <div class="buttons">
+      <button id="yesBtn">Yes 💖</button>
+      <button id="noBtn">No 🙈</button>
+      <button id="cuteBtn">Wait… are you sure? 🥺</button>
     </div>
+
+    <div class="message" id="message"></div>
   </div>
 
   <script>
-    /* 20 background images */
     const photos = [
       "photo1.jpg","photo2.jpg","photo3.jpg","photo4.jpg","photo5.jpg",
       "photo6.jpg","photo7.jpg","photo8.jpg","photo9.jpg","photo10.jpg",
@@ -156,9 +145,12 @@
     photos.forEach(src => {
       const img = document.createElement("img");
       img.src = src;
-      img.style.top = Math.random() * 92 + "%";
-      img.style.left = Math.random() * 92 + "%";
-      img.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+
+      img.style.top = Math.random() * 100 + "%";
+      img.style.left = Math.random() * 100 + "%";
+      img.style.transform = `rotate(${Math.random() * 40 - 20}deg)`;
+      img.style.zIndex = Math.floor(Math.random() * 5);
+
       collage.appendChild(img);
     });
 
@@ -167,10 +159,9 @@
     const cuteBtn = document.getElementById("cuteBtn");
     const message = document.getElementById("message");
 
-    // Mobile-friendly "escape"
     noBtn.addEventListener("touchstart", () => {
-      const x = Math.random() * 140 - 70;
-      const y = Math.random() * 50 - 25;
+      const x = Math.random() * 160 - 80;
+      const y = Math.random() * 80 - 40;
       noBtn.style.transform = `translate(${x}px, ${y}px)`;
     });
 
@@ -184,6 +175,7 @@
 
     yesBtn.addEventListener("click", () => {
       message.textContent = "Yay! 💖 I promise to make it special ✨";
+      if (navigator.vibrate) navigator.vibrate(60);
     });
   </script>
 
