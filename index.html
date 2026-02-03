@@ -1,41 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Feedback form validation</title>
-    <link rel="stylesheet" href="c.css">
-    <script src="j.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/ 
-         jquery/3.5.1/jquery.min.js">
-        </script>
+  <meta charset="UTF-8" />
+  <title>Be My Valentine 💖</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    .card {
+      background: white;
+      padding: 40px 50px;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 2rem;
+      color: #ff4d6d;
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 30px;
+    }
+
+    .buttons {
+      position: relative;
+      height: 80px;
+    }
+
+    button {
+      padding: 12px 26px;
+      font-size: 1rem;
+      border-radius: 30px;
+      border: none;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    #yesBtn {
+      background: #ff4d6d;
+      color: white;
+      margin-right: 15px;
+    }
+
+    #yesBtn:hover {
+      transform: scale(1.05);
+    }
+
+    #noBtn {
+      background: #ddd;
+      color: #333;
+      position: absolute;
+    }
+
+    .message {
+      margin-top: 25px;
+      font-size: 1.2rem;
+      color: #ff4d6d;
+      font-weight: 600;
+    }
+  </style>
 </head>
-
 <body>
-    <div class="wrapper">
-        <h2>FEEDBACK </h2>
-        <div id="error"></div>
-        <form action="p.php"  enctype = "multipart/form-data" method="POST" id="form" onsubmit="return validate();">
-            <div class="ip">
-                <div id='name'>
-                <input type="text" placeholder="Name" id="name" name="name">
-                <span class="validate_form" id="name_validate_message"></span>
-                </div>
-            </div>
-            <div class="ip">
-                <input type="text" placeholder="Phone" id="phone" name="phone">
-            </div>
-            <div class="ip">
-                <input type="text" placeholder="Email" id="email" name="email">
-            </div>
-            <div class="ip">
-                <textarea placeholder="Valueable Feedback" id="mssg"></textarea>
-            </div>
-            <div class="sub">
-                <input type="SUBMIT" id ="submitbtn" name="submit">
-            </div>
-        </form>
-    </div>
-</body>
+  <div class="card">
+    <h1>Hey you 💕</h1>
+    <p>I was wondering…</p>
+    <h1>Will you be my Valentine? 🌹</h1>
 
+    <div class="buttons">
+      <button id="yesBtn">Yes 💖</button>
+      <button id="noBtn">No 🙈</button>
+    </div>
+
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    const noBtn = document.getElementById("noBtn");
+    const yesBtn = document.getElementById("yesBtn");
+    const message = document.getElementById("message");
+
+    noBtn.addEventListener("mouseover", () => {
+      const x = Math.random() * 200 - 100;
+      const y = Math.random() * 60 - 30;
+      noBtn.style.transform = `translate(${x}px, ${y}px)`;
+    });
+
+    yesBtn.addEventListener("click", () => {
+      message.textContent = "Yay! 💘 I promise to make it special ✨";
+    });
+  </script>
+</body>
 </html>
