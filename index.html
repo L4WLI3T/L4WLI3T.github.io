@@ -42,7 +42,7 @@
       padding: 20px;
       text-align: center;
       color: white;
-      backdrop-filter: blur(2px);
+      /*backdrop-filter: blur(2px);*/
     }
 
     h1 {
@@ -146,8 +146,8 @@
       const img = document.createElement("img");
       img.src = src;
 
-      img.style.top = Math.random() * 100 + "%";
-      img.style.left = Math.random() * 100 + "%";
+      img.style.top = Math.random() * 200 + "%";
+      img.style.left = Math.random() * 200 + "%";
       img.style.transform = `rotate(${Math.random() * 40 - 20}deg)`;
       img.style.zIndex = Math.floor(Math.random() * 5);
 
@@ -181,3 +181,4 @@
 
 </body>
 </html>
+
