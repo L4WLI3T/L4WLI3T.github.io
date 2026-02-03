@@ -2,104 +2,190 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Be My Valentine 💖</title>
+
   <style>
     body {
       margin: 0;
       height: 100vh;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+    }
+
+    /* Background collage */
+    .collage {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .collage img {
+      position: absolute;
+      width: 85px;
+      border-radius: 12px;
+      opacity: 0.5;
+      object-fit: cover;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+    }
+
+    /* Center card */
+    .container {
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
-      font-family: "Segoe UI", sans-serif;
+      position: relative;
+      z-index: 1;
+      padding: 14px;
     }
 
     .card {
-      background: white;
-      padding: 40px 50px;
-      border-radius: 20px;
+      width: 100%;
+      max-width: 330px;
+      background: rgba(255, 255, 255, 0.96);
+      padding: 26px 20px;
+      border-radius: 22px;
       text-align: center;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 16px 32px rgba(0,0,0,0.2);
+      backdrop-filter: blur(6px);
     }
 
     h1 {
-      margin-bottom: 10px;
-      font-size: 2rem;
+      font-size: 1.45rem;
       color: #ff4d6d;
+      margin: 8px 0;
     }
 
     p {
-      font-size: 1.1rem;
+      font-size: 0.95rem;
       color: #555;
-      margin-bottom: 30px;
+      margin-bottom: 12px;
     }
 
     .buttons {
       position: relative;
-      height: 80px;
+      height: 110px;
+      margin-top: 16px;
     }
 
     button {
-      padding: 12px 26px;
-      font-size: 1rem;
-      border-radius: 30px;
+      padding: 12px 22px;
+      font-size: 0.95rem;
+      border-radius: 999px;
       border: none;
       cursor: pointer;
-      transition: 0.2s ease;
+    }
+
+    button:active {
+      transform: scale(0.95);
     }
 
     #yesBtn {
       background: #ff4d6d;
       color: white;
-      margin-right: 15px;
-    }
-
-    #yesBtn:hover {
-      transform: scale(1.05);
     }
 
     #noBtn {
-      background: #ddd;
+      background: #e5e5e5;
       color: #333;
       position: absolute;
+      left: 130px;
+    }
+
+    #cuteBtn {
+      display: none;
+      background: #ffd6e0;
+      color: #ff4d6d;
+      position: absolute;
+      top: 55px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: pop 0.3s ease;
+    }
+
+    @keyframes pop {
+      from { opacity: 0; transform: translateX(-50%) scale(0.7); }
+      to { opacity: 1; transform: translateX(-50%) scale(1); }
     }
 
     .message {
-      margin-top: 25px;
-      font-size: 1.2rem;
+      margin-top: 18px;
+      font-size: 1.05rem;
       color: #ff4d6d;
       font-weight: 600;
     }
   </style>
 </head>
+
 <body>
-  <div class="card">
-    <h1>Hey you 💕</h1>
-    <p>I was wondering…</p>
-    <h1>Will you be my Valentine? 🌹</h1>
 
-    <div class="buttons">
-      <button id="yesBtn">Yes 💖</button>
-      <button id="noBtn">No 🙈</button>
+  <!-- Background collage -->
+  <div class="collage" id="collage"></div>
+
+  <!-- Card -->
+  <div class="container">
+    <div class="card">
+      <h1>Hey you 💕</h1>
+      <p>I was wondering…</p>
+      <h1>Will you be my Valentine? 🌹</h1>
+
+      <div class="buttons">
+        <button id="yesBtn">Yes 💖</button>
+        <button id="noBtn">No 🙈</button>
+        <button id="cuteBtn">Wait… are you sure? 🥺</button>
+      </div>
+
+      <div class="message" id="message"></div>
     </div>
-
-    <div class="message" id="message"></div>
   </div>
 
   <script>
-    const noBtn = document.getElementById("noBtn");
+    /* 20 background images */
+    const photos = [
+      "photo1.jpg","photo2.jpg","photo3.jpg","photo4.jpg","photo5.jpg",
+      "photo6.jpg","photo7.jpg","photo8.jpg","photo9.jpg","photo10.jpg",
+      "photo11.jpg","photo12.jpg","photo13.jpg","photo14.jpg","photo15.jpg",
+      "photo16.jpg","photo17.jpg","photo18.jpg","photo19.jpg","photo20.jpg"
+    ];
+
+    const collage = document.getElementById("collage");
+
+    photos.forEach(src => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.style.top = Math.random() * 92 + "%";
+      img.style.left = Math.random() * 92 + "%";
+      img.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+      collage.appendChild(img);
+    });
+
     const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const cuteBtn = document.getElementById("cuteBtn");
     const message = document.getElementById("message");
 
-    noBtn.addEventListener("mouseover", () => {
-      const x = Math.random() * 200 - 100;
-      const y = Math.random() * 60 - 30;
+    // Mobile-friendly "escape"
+    noBtn.addEventListener("touchstart", () => {
+      const x = Math.random() * 140 - 70;
+      const y = Math.random() * 50 - 25;
       noBtn.style.transform = `translate(${x}px, ${y}px)`;
     });
 
+    noBtn.addEventListener("click", () => {
+      cuteBtn.style.display = "inline-block";
+    });
+
+    cuteBtn.addEventListener("click", () => {
+      message.textContent = "Okay okay… I’ll take that as a YES 💘🥹";
+    });
+
     yesBtn.addEventListener("click", () => {
-      message.textContent = "Yay! 💘 I promise to make it special ✨";
+      message.textContent = "Yay! 💖 I promise to make it special ✨";
     });
   </script>
+
 </body>
 </html>
