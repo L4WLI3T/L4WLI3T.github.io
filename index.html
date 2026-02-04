@@ -101,6 +101,7 @@
 
     #no2 { background: #ffd6e0; color: #ff4d6d; }
     #no3 { background: #ffb3c1; color: #7a001f; }
+    #no4 { background: #ffc2d1; color: #7a001f; }
 
     .message {
       margin-top: 22px;
@@ -165,9 +166,9 @@
       collage.appendChild(img);
     });
 
-    /* ===== Progressive No buttons ===== */
+    /* ===== Progressive No buttons (FIXED) ===== */
 
-    const steps = ["no1", "no2", "no3","no4"];
+    const steps = ["no1", "no2", "no3", "no4"];
     const message = document.getElementById("message");
     const yesBtn = document.getElementById("yesBtn");
 
@@ -182,10 +183,13 @@
     steps.forEach((id, index) => {
       const btn = document.getElementById(id);
 
-      // Reduce opacity by 20% each step
+      // opacity reduces each step
       btn.style.opacity = Math.max(1 - index * 0.25, 0.25);
 
       btn.addEventListener("click", () => {
+        // 🔒 CRITICAL FIX: prevent multi-tap
+        btn.style.pointerEvents = "none";
+
         btn.style.display = "none";
 
         if (index + 1 < steps.length) {
@@ -198,7 +202,7 @@
       });
     });
 
-    // Show first No button
+    // show first No
     const firstNo = document.getElementById("no1");
     placeRandom(firstNo);
     firstNo.style.display = "inline-block";
@@ -211,4 +215,3 @@
 
 </body>
 </html>
-
