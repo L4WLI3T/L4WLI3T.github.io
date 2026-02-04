@@ -101,7 +101,6 @@
 
     #no2 { background: #ffd6e0; color: #ff4d6d; }
     #no3 { background: #ffb3c1; color: #7a001f; }
-    #no4 { background: #ffc2d1; color: #7a001f; }
 
     .message {
       margin-top: 22px;
@@ -118,10 +117,10 @@
 
   <!-- Overlay content -->
   <div class="overlay">
-    <h1>Hey Sruberry my girlfriend💕</h1>
-    <p>I was wondering (No sorry, you gave hints directly)</p>
+    <h1>Hey Sruberry, my girlfriend 💕</h1>
+    <p>I was wondering… then realized the hints were deployed directly.</p>
     <h1>Will you be my Valentine? 🌹</h1>
-    
+
     <div class="buttons">
       <button id="yesBtn">Yes 💖</button>
 
@@ -140,7 +139,8 @@
       "photo1.jpg","photo2.jpg","photo3.jpg","photo4.jpg","photo5.jpg",
       "photo6.jpg","photo7.jpg","photo8.jpg","photo9.jpg","photo10.jpg",
       "photo11.jpg","photo12.jpg","photo13.jpg","photo14.jpg","photo15.jpg",
-      "photo16.jpg","photo17.jpg","photo18.jpg","photo19.jpg","photo20.jpg","photo21.jpg","photo22.jpg"
+      "photo16.jpg","photo17.jpg","photo18.jpg","photo19.jpg","photo20.jpg",
+      "photo21.jpg","photo22.jpg"
     ];
 
     const collage = document.getElementById("collage");
@@ -165,11 +165,13 @@
       collage.appendChild(img);
     });
 
-    /* ===== Progressive No buttons (FIXED) ===== */
+    /* ===== Progressive No buttons (DETERMINISTIC & FIXED) ===== */
 
     const steps = ["no1", "no2", "no3"];
     const message = document.getElementById("message");
     const yesBtn = document.getElementById("yesBtn");
+
+    let isAdvancing = false; // 🔒 global tap lock
 
     function placeRandom(btn) {
       const padding = 70;
@@ -182,37 +184,46 @@
     steps.forEach((id, index) => {
       const btn = document.getElementById(id);
 
-      // opacity reduces each step
+      // reduce opacity progressively
       btn.style.opacity = Math.max(1 - index * 0.3, 0.3);
 
-      btn.addEventListener("click", () => {
-        // 🔒 CRITICAL FIX: prevent multi-tap
-        btn.style.pointerEvents = "none";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
 
+        // 🚫 block all extra taps
+        if (isAdvancing) return;
+        isAdvancing = true;
+
+        btn.style.pointerEvents = "none";
         btn.style.display = "none";
 
         if (index + 1 < steps.length) {
           const nextBtn = document.getElementById(steps[index + 1]);
           placeRandom(nextBtn);
           nextBtn.style.display = "inline-block";
+
+          // 🔓 unlock after paint
+          requestAnimationFrame(() => {
+            isAdvancing = false;
+          });
         } else {
           message.textContent = "Error generating button: NO failed QA";
+          isAdvancing = false;
         }
       });
     });
 
-    // show first No
+    // show first No button
     const firstNo = document.getElementById("no1");
     placeRandom(firstNo);
     firstNo.style.display = "inline-block";
 
     yesBtn.addEventListener("click", () => {
-      message.textContent = "Yay! This valentine's build includes a special day 🥰 - check the zip compartment of your small red purse. ✨";
+      message.textContent =
+        "Yay! This Valentine’s build includes a special day 🥰 — check the zip compartment of your small red purse ✨";
       if (navigator.vibrate) navigator.vibrate(60);
     });
   </script>
 
 </body>
 </html>
-
-
