@@ -127,6 +127,7 @@
       <button class="no-step" id="no1">No 🙈</button>
       <button class="no-step" id="no2">Wait… are you sure? 🥺</button>
       <button class="no-step" id="no3">Last chance… pretty please? 🥹</button>
+      <button class="no-step" id="no4">Whattttt 🥹</button>
     </div>
 
     <div class="message" id="message"></div>
@@ -166,7 +167,7 @@
 
     /* ===== Progressive No buttons ===== */
 
-    const steps = ["no1", "no2", "no3"];
+    const steps = ["no1", "no2", "no3","no4"];
     const message = document.getElementById("message");
     const yesBtn = document.getElementById("yesBtn");
 
@@ -182,7 +183,7 @@
       const btn = document.getElementById(id);
 
       // Reduce opacity by 20% each step
-      btn.style.opacity = Math.max(1 - index * 0.2, 0.2);
+      btn.style.opacity = Math.max(1 - index * 0.25, 0.25);
 
       btn.addEventListener("click", () => {
         btn.style.display = "none";
@@ -210,3 +211,4 @@
 
 </body>
 </html>
+
