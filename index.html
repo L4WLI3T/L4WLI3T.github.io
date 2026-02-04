@@ -118,17 +118,16 @@
 
   <!-- Overlay content -->
   <div class="overlay">
-    <h1>Hey you 💕</h1>
-    <p>I was wondering…</p>
+    <h1>Hey Sruberry my girlfriend💕</h1>
+    <p>I was wondering (No sorry, you gave hints directly)</p>
     <h1>Will you be my Valentine? 🌹</h1>
-
+    
     <div class="buttons">
       <button id="yesBtn">Yes 💖</button>
 
-      <button class="no-step" id="no1">No 🙈</button>
+      <button class="no-step" id="no1">No 😶‍🌫️</button>
       <button class="no-step" id="no2">Wait… are you sure? 🥺</button>
-      <button class="no-step" id="no3">Last chance… pretty please? 🥹</button>
-      <button class="no-step" id="no4">Whattttt 🥹</button>
+      <button class="no-step" id="no3">This sureee? 😭</button>
     </div>
 
     <div class="message" id="message"></div>
@@ -141,7 +140,7 @@
       "photo1.jpg","photo2.jpg","photo3.jpg","photo4.jpg","photo5.jpg",
       "photo6.jpg","photo7.jpg","photo8.jpg","photo9.jpg","photo10.jpg",
       "photo11.jpg","photo12.jpg","photo13.jpg","photo14.jpg","photo15.jpg",
-      "photo16.jpg","photo17.jpg","photo18.jpg","photo19.jpg","photo20.jpg"
+      "photo16.jpg","photo17.jpg","photo18.jpg","photo19.jpg","photo20.jpg","photo21.jpg","photo22.jpg"
     ];
 
     const collage = document.getElementById("collage");
@@ -168,7 +167,7 @@
 
     /* ===== Progressive No buttons (FIXED) ===== */
 
-    const steps = ["no1", "no2", "no3", "no4"];
+    const steps = ["no1", "no2", "no3"];
     const message = document.getElementById("message");
     const yesBtn = document.getElementById("yesBtn");
 
@@ -184,7 +183,7 @@
       const btn = document.getElementById(id);
 
       // opacity reduces each step
-      btn.style.opacity = Math.max(1 - index * 0.25, 0.25);
+      btn.style.opacity = Math.max(1 - index * 0.3, 0.3);
 
       btn.addEventListener("click", () => {
         // 🔒 CRITICAL FIX: prevent multi-tap
@@ -197,7 +196,7 @@
           placeRandom(nextBtn);
           nextBtn.style.display = "inline-block";
         } else {
-          message.textContent = "Okay okay… I give up 😌💘";
+          message.textContent = "Error generating button: NO failed QA";
         }
       });
     });
@@ -208,11 +207,12 @@
     firstNo.style.display = "inline-block";
 
     yesBtn.addEventListener("click", () => {
-      message.textContent = "Yay! 💖 I promise to make it special ✨";
+      message.textContent = "Yay! This valentine's build includes a special day 🥰 - check the zip compartment of your small red purse. ✨";
       if (navigator.vibrate) navigator.vibrate(60);
     });
   </script>
 
 </body>
 </html>
+
 
