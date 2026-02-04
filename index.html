@@ -14,7 +14,7 @@
       background: #000;
     }
 
-    /* Full-screen collage */
+    /* Fullscreen collage */
     .collage {
       position: fixed;
       inset: 0;
@@ -28,6 +28,17 @@
       opacity: 0.5;
       object-fit: cover;
       box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+      animation: float linear infinite;
+    }
+
+    /* Floating animation */
+    @keyframes float {
+      from {
+        transform: translate(0, 0) rotate(var(--rot));
+      }
+      to {
+        transform: translate(var(--x), var(--y)) rotate(var(--rot));
+      }
     }
 
     /* Overlay content */
@@ -42,19 +53,17 @@
       padding: 20px;
       text-align: center;
       color: white;
-      /*backdrop-filter: blur(2px);*/
+      text-shadow: 0 4px 10px rgba(0,0,0,0.7);
     }
 
     h1 {
       font-size: 1.6rem;
       margin: 8px 0;
-      text-shadow: 0 4px 10px rgba(0,0,0,0.6);
     }
 
     p {
       font-size: 1rem;
       margin-bottom: 10px;
-      text-shadow: 0 4px 10px rgba(0,0,0,0.6);
     }
 
     .buttons {
@@ -80,44 +89,33 @@
       color: white;
     }
 
-    #noBtn {
+    .no-step {
+      display: none;
       background: #ffffffcc;
       color: #333;
       position: absolute;
-      left: 140px;
-    }
-
-    #cuteBtn {
-      display: none;
-      background: #ffd6e0;
-      color: #ff4d6d;
-      position: absolute;
-      top: 60px;
       left: 50%;
       transform: translateX(-50%);
-      animation: pop 0.3s ease;
     }
 
-    @keyframes pop {
-      from { opacity: 0; transform: translateX(-50%) scale(0.7); }
-      to { opacity: 1; transform: translateX(-50%) scale(1); }
-    }
+    #no1 { display: inline-block; }
+    #no2 { background: #ffd6e0; color: #ff4d6d; }
+    #no3 { background: #ffb3c1; color: #7a001f; }
 
     .message {
       margin-top: 22px;
       font-size: 1.1rem;
       font-weight: 600;
-      text-shadow: 0 4px 10px rgba(0,0,0,0.6);
     }
   </style>
 </head>
 
 <body>
 
-  <!-- Background collage -->
+  <!-- Moving background collage -->
   <div class="collage" id="collage"></div>
 
-  <!-- Floating content -->
+  <!-- Overlay content -->
   <div class="overlay">
     <h1>Hey you 💕</h1>
     <p>I was wondering…</p>
@@ -125,14 +123,18 @@
 
     <div class="buttons">
       <button id="yesBtn">Yes 💖</button>
-      <button id="noBtn">No 🙈</button>
-      <button id="cuteBtn">Wait… are you sure? 🥺</button>
+
+      <button class="no-step" id="no1">No 🙈</button>
+      <button class="no-step" id="no2">Wait… are you sure? 🥺</button>
+      <button class="no-step" id="no3">Last chance… pretty please? 🥹</button>
     </div>
 
     <div class="message" id="message"></div>
   </div>
 
   <script>
+    /* ===== Moving background images ===== */
+
     const photos = [
       "photo1.jpg","photo2.jpg","photo3.jpg","photo4.jpg","photo5.jpg",
       "photo6.jpg","photo7.jpg","photo8.jpg","photo9.jpg","photo10.jpg",
@@ -146,31 +148,41 @@
       const img = document.createElement("img");
       img.src = src;
 
-      img.style.top = Math.random() * 200 + "%";
-      img.style.left = Math.random() * 200 + "%";
-      img.style.transform = `rotate(${Math.random() * 40 - 20}deg)`;
-      img.style.zIndex = Math.floor(Math.random() * 5);
+      // Random start position
+      img.style.top = Math.random() * 100 + "%";
+      img.style.left = Math.random() * 100 + "%";
+
+      // Random movement
+      const x = Math.random() * 200 - 100 + "px";
+      const y = Math.random() * 200 - 100 + "px";
+      const rot = Math.random() * 40 - 20 + "deg";
+      const duration = Math.random() * 30 + 20 + "s";
+
+      img.style.setProperty("--x", x);
+      img.style.setProperty("--y", y);
+      img.style.setProperty("--rot", rot);
+      img.style.animationDuration = duration;
 
       collage.appendChild(img);
     });
 
-    const yesBtn = document.getElementById("yesBtn");
-    const noBtn = document.getElementById("noBtn");
-    const cuteBtn = document.getElementById("cuteBtn");
+    /* ===== Progressive No buttons ===== */
+
+    const steps = ["no1", "no2", "no3"];
     const message = document.getElementById("message");
+    const yesBtn = document.getElementById("yesBtn");
 
-    noBtn.addEventListener("touchstart", () => {
-      const x = Math.random() * 160 - 80;
-      const y = Math.random() * 80 - 40;
-      noBtn.style.transform = `translate(${x}px, ${y}px)`;
-    });
+    steps.forEach((id, index) => {
+      const btn = document.getElementById(id);
+      btn.addEventListener("click", () => {
+        btn.style.display = "none";
 
-    noBtn.addEventListener("click", () => {
-      cuteBtn.style.display = "inline-block";
-    });
-
-    cuteBtn.addEventListener("click", () => {
-      message.textContent = "Okay okay… I’ll take that as a YES 💘🥹";
+        if (index + 1 < steps.length) {
+          document.getElementById(steps[index + 1]).style.display = "inline-block";
+        } else {
+          message.textContent = "Okay okay… I give up 😌💘";
+        }
+      });
     });
 
     yesBtn.addEventListener("click", () => {
@@ -181,4 +193,3 @@
 
 </body>
 </html>
-
