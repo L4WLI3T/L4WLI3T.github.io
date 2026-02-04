@@ -14,11 +14,12 @@
       background: #000;
     }
 
-    /* Fullscreen collage */
+    /* Full-screen moving collage */
     .collage {
       position: fixed;
       inset: 0;
       z-index: 0;
+      overflow: hidden;
     }
 
     .collage img {
@@ -31,7 +32,6 @@
       animation: float linear infinite;
     }
 
-    /* Floating animation */
     @keyframes float {
       from {
         transform: translate(0, 0) rotate(var(--rot));
@@ -70,6 +70,7 @@
       position: relative;
       margin-top: 20px;
       height: 120px;
+      width: 100%;
     }
 
     button {
@@ -93,12 +94,11 @@
       display: none;
       background: #ffffffcc;
       color: #333;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
+      position: fixed;
+      z-index: 3;
+      transform: translate(-50%, -50%);
     }
 
-    #no1 { display: inline-block; }
     #no2 { background: #ffd6e0; color: #ff4d6d; }
     #no3 { background: #ffb3c1; color: #7a001f; }
 
@@ -112,10 +112,10 @@
 
 <body>
 
-  <!-- Moving background collage -->
+  <!-- Moving background images -->
   <div class="collage" id="collage"></div>
 
-  <!-- Overlay content -->
+  <!-- Overlay text and buttons -->
   <div class="overlay">
     <h1>Hey you 💕</h1>
     <p>I was wondering…</p>
@@ -133,7 +133,7 @@
   </div>
 
   <script>
-    /* ===== Moving background images ===== */
+    /* ===== Background moving photos ===== */
 
     const photos = [
       "photo1.jpg","photo2.jpg","photo3.jpg","photo4.jpg","photo5.jpg",
@@ -148,11 +148,9 @@
       const img = document.createElement("img");
       img.src = src;
 
-      // Random start position
       img.style.top = Math.random() * 100 + "%";
       img.style.left = Math.random() * 100 + "%";
 
-      // Random movement
       const x = Math.random() * 200 - 100 + "px";
       const y = Math.random() * 200 - 100 + "px";
       const rot = Math.random() * 40 - 20 + "deg";
@@ -166,11 +164,19 @@
       collage.appendChild(img);
     });
 
-    /* ===== Progressive No buttons ===== */
+    /* ===== Random No buttons ===== */
 
     const steps = ["no1", "no2", "no3"];
     const message = document.getElementById("message");
     const yesBtn = document.getElementById("yesBtn");
+
+    function placeRandom(btn) {
+      const padding = 70;
+      const x = Math.random() * (window.innerWidth - padding * 2) + padding;
+      const y = Math.random() * (window.innerHeight - padding * 2) + padding;
+      btn.style.left = x + "px";
+      btn.style.top = y + "px";
+    }
 
     steps.forEach((id, index) => {
       const btn = document.getElementById(id);
@@ -178,12 +184,18 @@
         btn.style.display = "none";
 
         if (index + 1 < steps.length) {
-          document.getElementById(steps[index + 1]).style.display = "inline-block";
+          const nextBtn = document.getElementById(steps[index + 1]);
+          placeRandom(nextBtn);
+          nextBtn.style.display = "inline-block";
         } else {
           message.textContent = "Okay okay… I give up 😌💘";
         }
       });
     });
+
+    const firstNo = document.getElementById("no1");
+    placeRandom(firstNo);
+    firstNo.style.display = "inline-block";
 
     yesBtn.addEventListener("click", () => {
       message.textContent = "Yay! 💖 I promise to make it special ✨";
