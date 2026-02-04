@@ -14,7 +14,6 @@
       background: #000;
     }
 
-    /* ===== Background collage ===== */
     .collage {
       position: fixed;
       inset: 0;
@@ -33,15 +32,10 @@
     }
 
     @keyframes float {
-      from {
-        transform: translate(0, 0) rotate(var(--rot));
-      }
-      to {
-        transform: translate(var(--x), var(--y)) rotate(var(--rot));
-      }
+      from { transform: translate(0,0) rotate(var(--rot)); }
+      to   { transform: translate(var(--x),var(--y)) rotate(var(--rot)); }
     }
 
-    /* ===== Overlay ===== */
     .overlay {
       position: relative;
       z-index: 2;
@@ -56,20 +50,10 @@
       text-shadow: 0 4px 10px rgba(0,0,0,0.7);
     }
 
-    h1 {
-      font-size: 1.6rem;
-      margin: 8px 0;
-    }
+    h1 { font-size: 1.6rem; margin: 8px 0; }
+    p  { font-size: 1rem; margin-bottom: 10px; }
 
-    p {
-      font-size: 1rem;
-      margin-bottom: 10px;
-    }
-
-    .buttons {
-      margin-top: 20px;
-      width: 100%;
-    }
+    .buttons { margin-top: 20px; width: 100%; }
 
     button {
       padding: 14px 26px;
@@ -79,14 +63,11 @@
       cursor: pointer;
     }
 
-    button:active {
-      transform: scale(0.95);
-    }
+    button:active { transform: scale(0.95); }
 
     #yesBtn {
       background: #ff4d6d;
       color: white;
-      z-index: 3;
     }
 
     .no-step {
@@ -97,6 +78,7 @@
       color: #333;
       transform: translate(-50%, -50%);
       transition: opacity 0.3s ease;
+      touch-action: manipulation; /* 🔑 important */
     }
 
     #no2 { background: #ffd6e0; color: #ff4d6d; }
@@ -112,10 +94,8 @@
 
 <body>
 
-  <!-- Background images -->
   <div class="collage" id="collage"></div>
 
-  <!-- Overlay content -->
   <div class="overlay">
     <h1>Hey Sruberry, my girlfriend 💕</h1>
     <p>I was wondering… then realized the hints were deployed directly.</p>
@@ -133,14 +113,13 @@
   </div>
 
   <script>
-    /* ===== Moving background images ===== */
+    /* ===== Background images ===== */
 
     const photos = [
       "photo1.jpg","photo2.jpg","photo3.jpg","photo4.jpg","photo5.jpg",
       "photo6.jpg","photo7.jpg","photo8.jpg","photo9.jpg","photo10.jpg",
       "photo11.jpg","photo12.jpg","photo13.jpg","photo14.jpg","photo15.jpg",
-      "photo16.jpg","photo17.jpg","photo18.jpg","photo19.jpg","photo20.jpg",
-      "photo21.jpg","photo22.jpg"
+      "photo16.jpg","photo17.jpg","photo18.jpg","photo19.jpg","photo20.jpg"
     ];
 
     const collage = document.getElementById("collage");
@@ -148,77 +127,50 @@
     photos.forEach(src => {
       const img = document.createElement("img");
       img.src = src;
-
       img.style.top = Math.random() * 100 + "%";
       img.style.left = Math.random() * 100 + "%";
 
-      const x = Math.random() * 200 - 100 + "px";
-      const y = Math.random() * 200 - 100 + "px";
-      const rot = Math.random() * 40 - 20 + "deg";
-      const duration = Math.random() * 30 + 20 + "s";
-
-      img.style.setProperty("--x", x);
-      img.style.setProperty("--y", y);
-      img.style.setProperty("--rot", rot);
-      img.style.animationDuration = duration;
+      img.style.setProperty("--x", (Math.random()*200-100)+"px");
+      img.style.setProperty("--y", (Math.random()*200-100)+"px");
+      img.style.setProperty("--rot", (Math.random()*40-20)+"deg");
+      img.style.animationDuration = (Math.random()*30+20)+"s";
 
       collage.appendChild(img);
     });
 
-    /* ===== Progressive No buttons (DETERMINISTIC & FIXED) ===== */
+    /* ===== No buttons (ABSOLUTELY DETERMINISTIC) ===== */
 
     const steps = ["no1", "no2", "no3"];
     const message = document.getElementById("message");
-    const yesBtn = document.getElementById("yesBtn");
-
-    let isAdvancing = false; // 🔒 global tap lock
 
     function placeRandom(btn) {
-      const padding = 70;
-      btn.style.left =
-        Math.random() * (window.innerWidth - padding * 2) + padding + "px";
-      btn.style.top =
-        Math.random() * (window.innerHeight - padding * 2) + padding + "px";
+      const pad = 70;
+      btn.style.left = Math.random() * (innerWidth - pad*2) + pad + "px";
+      btn.style.top  = Math.random() * (innerHeight - pad*2) + pad + "px";
     }
 
-    steps.forEach((id, index) => {
+    steps.forEach((id, i) => {
       const btn = document.getElementById(id);
+      btn.style.opacity = Math.max(1 - i*0.3, 0.3);
 
-      // reduce opacity progressively
-      btn.style.opacity = Math.max(1 - index * 0.3, 0.3);
-
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-
-        // 🚫 block all extra taps
-        if (isAdvancing) return;
-        isAdvancing = true;
-
-        btn.style.pointerEvents = "none";
+      btn.addEventListener("pointerdown", () => {
         btn.style.display = "none";
 
-        if (index + 1 < steps.length) {
-          const nextBtn = document.getElementById(steps[index + 1]);
-          placeRandom(nextBtn);
-          nextBtn.style.display = "inline-block";
-
-          // 🔓 unlock after paint
-          requestAnimationFrame(() => {
-            isAdvancing = false;
-          });
+        if (i + 1 < steps.length) {
+          const next = document.getElementById(steps[i + 1]);
+          placeRandom(next);
+          next.style.display = "inline-block";
         } else {
           message.textContent = "Error generating button: NO failed QA";
-          isAdvancing = false;
         }
-      });
+      }, { once: true }); // 🔥 GUARANTEE
     });
 
-    // show first No button
     const firstNo = document.getElementById("no1");
     placeRandom(firstNo);
     firstNo.style.display = "inline-block";
 
-    yesBtn.addEventListener("click", () => {
+    document.getElementById("yesBtn").addEventListener("pointerdown", () => {
       message.textContent =
         "Yay! This Valentine’s build includes a special day 🥰 — check the zip compartment of your small red purse ✨";
       if (navigator.vibrate) navigator.vibrate(60);
