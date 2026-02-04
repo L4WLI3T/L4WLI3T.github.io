@@ -14,7 +14,7 @@
       background: #000;
     }
 
-    /* Full-screen moving collage */
+    /* ===== Background collage ===== */
     .collage {
       position: fixed;
       inset: 0;
@@ -41,7 +41,7 @@
       }
     }
 
-    /* Overlay content */
+    /* ===== Overlay ===== */
     .overlay {
       position: relative;
       z-index: 2;
@@ -67,9 +67,7 @@
     }
 
     .buttons {
-      position: relative;
       margin-top: 20px;
-      height: 120px;
       width: 100%;
     }
 
@@ -88,15 +86,17 @@
     #yesBtn {
       background: #ff4d6d;
       color: white;
+      z-index: 3;
     }
 
     .no-step {
       display: none;
-      background: #ffffffcc;
-      color: #333;
       position: fixed;
       z-index: 3;
+      background: #ffffffcc;
+      color: #333;
       transform: translate(-50%, -50%);
+      transition: opacity 0.3s ease;
     }
 
     #no2 { background: #ffd6e0; color: #ff4d6d; }
@@ -112,10 +112,10 @@
 
 <body>
 
-  <!-- Moving background images -->
+  <!-- Background images -->
   <div class="collage" id="collage"></div>
 
-  <!-- Overlay text and buttons -->
+  <!-- Overlay content -->
   <div class="overlay">
     <h1>Hey you 💕</h1>
     <p>I was wondering…</p>
@@ -133,7 +133,7 @@
   </div>
 
   <script>
-    /* ===== Background moving photos ===== */
+    /* ===== Moving background images ===== */
 
     const photos = [
       "photo1.jpg","photo2.jpg","photo3.jpg","photo4.jpg","photo5.jpg",
@@ -164,7 +164,7 @@
       collage.appendChild(img);
     });
 
-    /* ===== Random No buttons ===== */
+    /* ===== Progressive No buttons ===== */
 
     const steps = ["no1", "no2", "no3"];
     const message = document.getElementById("message");
@@ -172,14 +172,18 @@
 
     function placeRandom(btn) {
       const padding = 70;
-      const x = Math.random() * (window.innerWidth - padding * 2) + padding;
-      const y = Math.random() * (window.innerHeight - padding * 2) + padding;
-      btn.style.left = x + "px";
-      btn.style.top = y + "px";
+      btn.style.left =
+        Math.random() * (window.innerWidth - padding * 2) + padding + "px";
+      btn.style.top =
+        Math.random() * (window.innerHeight - padding * 2) + padding + "px";
     }
 
     steps.forEach((id, index) => {
       const btn = document.getElementById(id);
+
+      // Reduce opacity by 20% each step
+      btn.style.opacity = Math.max(1 - index * 0.2, 0.2);
+
       btn.addEventListener("click", () => {
         btn.style.display = "none";
 
@@ -193,6 +197,7 @@
       });
     });
 
+    // Show first No button
     const firstNo = document.getElementById("no1");
     placeRandom(firstNo);
     firstNo.style.display = "inline-block";
