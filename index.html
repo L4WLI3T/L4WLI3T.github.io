@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Expense Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+  :root{
+    --ink:#1c2541;
+    --paper:#eee7d6;
+    --paper-light:#f6f1e4;
+    --slate:#15191c;
+    --slate-2:#20262b;
+    --gold:#c98a2c;
+    --sage:#5d7d57;
+    --rust:#a8463a;
+    --line:#d8cdb2;
+    --shadow:0 4px 18px rgba(0,0,0,.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; height:100%;}
+  body{
+    background:var(--slate);
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  #app{
+    color:var(--paper-light);
+    min-height:100vh;
+    padding:18px 18px 40px;
+  }
+  /* ---- Auth screen ---- */
+  #authScreen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .auth-card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+    padding:32px;
+    max-width:380px;
+    width:100%;
+  }
+  .auth-card h1{
+    font-family:'IBM Plex Serif',serif;
+    font-size:24px;
+    margin:0 0 4px;
+  }
+  .auth-card .sub{font-size:13px; color:#6b6450; margin-bottom:22px;}
+  .auth-card .field{display:flex; flex-direction:column; gap:5px; margin-bottom:14px;}
+  .auth-card label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#6b6450; font-weight:600;}
+  .auth-card input{
+    padding:10px 11px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:var(--paper-light);
+    color:var(--ink);
+    font-size:14px;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .auth-card input:focus{outline:2px solid var(--gold); outline-offset:1px;}
+  .auth-error{color:var(--rust); font-size:12.5px; margin:-4px 0 12px; min-height:16px;}
+  .auth-toggle{font-size:12.5px; text-align:center; margin-top:14px; color:#6b6450;}
+  .auth-toggle a{color:var(--gold); cursor:pointer; font-weight:600; text-decoration:none;}
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-bottom:18px;
+  }
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand h1{
+    font-family:'IBM Plex Serif',serif;
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:.3px;
+    margin:0;
+    color:var(--paper-light);
+  }
+  .brand .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+    border:1px solid var(--gold);
+    padding:2px 8px;
+    border-radius:3px;
+  }
+  .top-actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .month-input{
+    font-family:'IBM Plex Mono',monospace;
+    background:var(--slate-2);
+    color:var(--paper-light);
+    border:1px solid #3a4147;
+    border-radius:6px;
+    padding:7px 10px;
+    font-size:13px;
+  }
+  .email-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:#8d96a0;
+    border:1px solid #3a4147;
+    padding:6px 10px;
+    border-radius:14px;
+  }
+  button{font-family:'IBM Plex Sans',sans-serif; cursor:pointer;}
+  .btn{border:none; border-radius:6px; padding:9px 16px; font-size:13px; font-weight:600; letter-spacing:.02em;}
+  .btn-gold{background:var(--gold); color:#241405;}
+  .btn-gold:hover{background:#dba042;}
+  .btn-ghost{background:transparent; color:var(--paper-light); border:1px solid #4a525a;}
+  .btn-ghost:hover{border-color:var(--gold); color:var(--gold);}
+  .btn-danger{background:transparent; color:var(--rust); border:1px solid var(--rust); padding:4px 10px; font-size:12px;}
+  .btn-danger:hover{background:var(--rust); color:#fff;}
+  .btn-full{width:100%;}
+
+  nav.tabs{display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid #2b3238; flex-wrap:wrap;}
+  nav.tabs button{
+    background:transparent; border:none; color:#8d96a0; font-size:13px; font-weight:600;
+    padding:10px 16px; border-bottom:2px solid transparent; letter-spacing:.02em;
+  }
+  nav.tabs button.active{color:var(--paper-light); border-bottom-color:var(--gold);}
+  nav.tabs button:hover{color:var(--paper-light);}
+
+  .panel{background:var(--paper); color:var(--ink); border-radius:10px; box-shadow:var(--shadow); padding:22px;}
+  .panel h2{font-family:'IBM Plex Serif',serif; font-size:18px; margin:0 0 16px; color:var(--ink);}
+  .grid-2col{display:grid; grid-template-columns:1.3fr 0.9fr; gap:18px;}
+  @media (max-width:900px){.grid-2col{grid-template-columns:1fr;}}
+
+  .form-row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+  .field{display:flex; flex-direction:column; gap:5px; flex:1; min-width:140px;}
+  .field label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#6b6450; font-weight:600;}
+  .field input, .field select{
+    font-family:'IBM Plex Sans',sans-serif; padding:9px 10px; border:1px solid var(--line);
+    border-radius:6px; background:var(--paper-light); color:var(--ink); font-size:14px;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--gold); outline-offset:1px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{
+    text-align:left; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:#6b6450; border-bottom:2px solid var(--ink); padding:8px 8px;
+  }
+  td{padding:8px 8px; border-bottom:1px solid var(--line);}
+  tr.total-row td{font-weight:700; border-top:2px solid var(--ink); border-bottom:none;}
+  .num{font-family:'IBM Plex Mono',monospace; text-align:right; white-space:nowrap;}
+  .neg{color:var(--rust); font-weight:700;}
+  .pos{color:var(--sage);}
+  .badge{font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:2px 7px; border-radius:10px; letter-spacing:.04em;}
+  .badge.need{background:#dbe4d6; color:#3c5734;}
+  .badge.want{background:#f0ddc2; color:#7a5418;}
+  .empty{color:#8a8164; font-style:italic; padding:20px 0; text-align:center;}
+
+  .tape-wrap{background:var(--slate-2); border-radius:10px; padding:0; box-shadow:var(--shadow); overflow:hidden;}
+  .tape-header{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); padding:14px 16px 8px;}
+  .tape{font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#cfd6da; padding:0 16px 16px; max-height:420px; overflow-y:auto;}
+  .tape-row{display:flex; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px dashed #3a4147;}
+  .tape-row .t-cat{color:#8d96a0; font-size:11px;}
+  .tape-row .t-amt{font-weight:600;}
+
+  .bd-category{display:flex; justify-content:space-between; align-items:center; background:#e2d8bd; padding:9px 12px; border-radius:6px; margin-top:14px; cursor:pointer;}
+  .bd-category:first-of-type{margin-top:0;}
+  .bd-category .name{font-weight:700; font-family:'IBM Plex Serif',serif;}
+  .bd-subs{padding:4px 0 4px 18px;}
+  .bd-sub-row{display:flex; justify-content:space-between; padding:6px 4px; border-bottom:1px dotted var(--line); font-size:13px;}
+  .bd-sub-row .s-amt{font-family:'IBM Plex Mono',monospace;}
+  .chev{transition:transform .15s ease; font-size:11px; color:#6b6450;}
+  .chev.open{transform:rotate(90deg);}
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+    background:var(--gold); color:#241405; font-weight:600; font-size:13px;
+    padding:10px 20px; border-radius:8px; box-shadow:var(--shadow);
+    opacity:0; transition:opacity .25s ease; pointer-events:none; z-index:50;
+  }
+  .toast.show{opacity:1;}
+  .loading-note{font-family:'IBM Plex Mono',monospace; font-size:12px; color:#8d96a0; padding:30px; text-align:center;}
+  .hint{font-size:12px; color:#6b6450; margin-top:-6px; margin-bottom:14px;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-card">
+    <h1>Ledger</h1>
+    <div class="sub" id="authSubtitle">Sign in to sync your expenses across devices.</div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="authEmail" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="authPassword" autocomplete="current-password">
+    </div>
+    <div class="auth-error" id="authError"></div>
+    <button class="btn btn-gold btn-full" id="authSubmitBtn">Sign in</button>
+    <div class="auth-toggle" id="authToggle">New here? <a id="authToggleLink">Create an account</a></div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar">
+    <div class="brand">
+      <h1>Ledger</h1>
+      <span class="tag">Expense Tracker</span>
+    </div>
+    <div class="top-actions">
+      <span class="email-pill" id="userEmailPill"></span>
+      <input type="month" id="monthPicker" class="month-input">
+      <button class="btn btn-ghost" id="signOutBtn">Sign out</button>
+      <button class="btn btn-ghost" id="resetBtn">Reset data</button>
+      <button class="btn btn-gold" id="exportBtn">Export to Excel</button>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="add" class="active">Add Expense</button>
+    <button data-tab="log">Log</button>
+    <button data-tab="budgets">Budgets</button>
+    <button data-tab="dashboard">Dashboard</button>
+    <button data-tab="breakdown">Breakdown</button>
+  </nav>
+
+  <div id="content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  onAuthStateChanged, signOut, setPersistence, browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+/* =======================================================================
+   1) PASTE YOUR FIREBASE CONFIG HERE
+   Firebase Console -> Project settings -> General -> Your apps -> SDK setup
+   ======================================================================= */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+await setPersistence(auth, browserLocalPersistence);
+
+const TAXONOMY = {
+  "Children": {type:"Need", subs:["Activities","Allowance","Medical","Childcare","Clothing","School","Toys","Other"]},
+  "Debt": {type:"Need", subs:["Credit cards","Student loans","Auto loans","Taxes","Other"]},
+  "Education": {type:"Need", subs:["Tuition","Courses","Certifications","Books","Exams","Other"]},
+  "Entertainment/Recreational": {type:"Want", subs:["Books","Concerts/shows","Games","Hobbies","Films/Theatre/Plays","Music","Outdoor activities","Photography","Sport","Gym/Spa","TV","Subscriptions","Other"]},
+  "Apareals": {type:"Want", subs:["Clothes","Footwear","Hair/Skin Products and Salons","Laundry/Dry Cleaning","Travel Items/Accessories"]},
+  "Everyday": {type:"Need", subs:["Groceries/Daily Items","Restaurants","Cafeteria","Takeaway","Fast Food","Personal supplies","Other"]},
+  "Gifts": {type:"Want", subs:["Gifts","Donations (charity)","Other"]},
+  "Health/medical": {type:"Need", subs:["Medicines","Optics","Doctors/dental/vision","Specialist care","Pharmacy/Diagnostics","Emergency","Other"]},
+  "Home": {type:"Need", subs:["Rent/mortgage/Cook/Maid","Property taxes","Furnishings","Lawn/garden/House hel","Supplies","Maintenance/Bills","Improvements","Moving","Other"]},
+  "Insurance": {type:"Need", subs:["Car","Health","Home","Life","Other"]},
+  "Pets": {type:"Need", subs:["Food","Vet/medical","Toys","Supplies","Other"]},
+  "Technology": {type:"Want", subs:["Domains & hosting","Online services","Hardware","Software","Other"]},
+  "Transportation": {type:"Need", subs:["Fuel","Car/Bike payments","Car/Bike Repairs","Registration/license","Supplies","Public transit(Taxi/Auto)","Public transit(Air/Rail/Metro/Bus)","Cycle","Cycle Repairs","Other"]},
+  "Travel": {type:"Want", subs:["Airfare/Railway","Hotels","Food","Transportation","Entertainment/Activities","Other"]},
+  "Utilities": {type:"Need", subs:["Phone","TV","Internet","Electricity","Heat/gas","Water","Other"]},
+  "Investments": {type:"Want", subs:["FD/RD/Bonds","Gold/Silver","Equity","Mutual Funds","Crypto"]},
+  "Other": {type:"Want", subs:["Category 1","Category 2"]}
+};
+const CATEGORY_NAMES = Object.keys(TAXONOMY);
+
+let entries = [];
+let budgets = {};
+let currentTab = "add";
+let openCats = new Set();
+let currentUser = null;
+let isSignUpMode = false;
+
+const $ = sel => document.querySelector(sel);
+const content = $("#content");
+const monthPicker = $("#monthPicker");
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function thisMonth(){ return new Date().toISOString().slice(0,7); }
+function fmt(n){
+  n = Math.round(n||0);
+  const neg = n < 0;
+  const s = Math.abs(n).toLocaleString('en-IN');
+  return (neg ? '-₹' : '₹') + s;
+}
+function showToast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+/* ---------------- Auth ---------------- */
+function handleAuthToggleClick(){
+  isSignUpMode = !isSignUpMode;
+  $("#authSubtitle").textContent = isSignUpMode
+    ? "Create an account to start syncing your expenses."
+    : "Sign in to sync your expenses across devices.";
+  $("#authSubmitBtn").textContent = isSignUpMode ? "Create account" : "Sign in";
+  $("#authToggle").innerHTML = isSignUpMode
+    ? 'Already have an account? <a id="authToggleLink">Sign in</a>'
+    : 'New here? <a id="authToggleLink">Create an account</a>';
+  document.getElementById('authToggleLink').addEventListener('click', handleAuthToggleClick);
+  $("#authError").textContent = "";
+}
+$("#authToggleLink").addEventListener('click', handleAuthToggleClick);
+
+$("#authSubmitBtn").addEventListener('click', async () => {
+  const email = $("#authEmail").value.trim();
+  const password = $("#authPassword").value;
+  $("#authError").textContent = "";
+  if(!email || !password){
+    $("#authError").textContent = "Enter an email and password.";
+    return;
+  }
+  try{
+    if(isSignUpMode){
+      await createUserWithEmailAndPassword(auth, email, password);
+    }else{
+      await signInWithEmailAndPassword(auth, email, password);
+    }
+  }catch(err){
+    $("#authError").textContent = err.message.replace("Firebase: ","").replace(/\(auth\/.*\)\.?/,"").trim();
+  }
+});
+
+$("#signOutBtn").addEventListener('click', async () => {
+  await signOut(auth);
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if(user){
+    currentUser = user;
+    $("#authScreen").classList.add('hidden');
+    $("#app").classList.remove('hidden');
+    $("#userEmailPill").textContent = user.email;
+    await init();
+  }else{
+    currentUser = null;
+    $("#app").classList.add('hidden');
+    $("#authScreen").classList.remove('hidden');
+  }
+});
+
+/* ---------------- Firestore storage ---------------- */
+function userDocRef(){
+  return doc(db, "users", currentUser.uid);
+}
+async function loadData(){
+  try{
+    const snap = await getDoc(userDocRef());
+    if(snap.exists()){
+      const data = snap.data();
+      entries = data.entries || [];
+      budgets = data.budgets || null;
+    }else{
+      entries = [];
+      budgets = null;
+    }
+  }catch(e){
+    console.error("load failed", e);
+    entries = []; budgets = null;
+    showToast("Couldn't load data — check your Firebase config/rules");
+  }
+  if(!budgets){
+    budgets = {};
+    CATEGORY_NAMES.forEach(c => budgets[c] = {type: TAXONOMY[c].type, budget: 5000});
+    await saveAll();
+  }
+}
+async function saveAll(){
+  try{
+    await setDoc(userDocRef(), { entries, budgets }, { merge: true });
+  }catch(e){
+    console.error("save failed", e);
+    showToast("Couldn't save — check your Firebase config/rules");
+  }
+}
+
+function entriesForMonth(month){ return entries.filter(e => e.date && e.date.slice(0,7) === month); }
+function spentByCategory(month){
+  const out = {}; CATEGORY_NAMES.forEach(c => out[c]=0);
+  entriesForMonth(month).forEach(e => { out[e.category] = (out[e.category]||0) + Number(e.amount||0); });
+  return out;
+}
+function spentBySub(month){
+  const out = {};
+  CATEGORY_NAMES.forEach(c => { out[c] = {}; TAXONOMY[c].subs.forEach(s => out[c][s]=0); });
+  entriesForMonth(month).forEach(e => {
+    if(out[e.category] && e.subcategory in out[e.category]) out[e.category][e.subcategory] += Number(e.amount||0);
+  });
+  return out;
+}
+
+/* ---------------- Render: Add Expense ---------------- */
+function renderAdd(){
+  content.innerHTML = `
+    <div class="panel" style="max-width:640px;">
+      <h2>Add an expense</h2>
+      <div class="form-row">
+        <div class="field">
+          <label>Type</label>
+          <select id="f-type"><option value="Need">Need</option><option value="Want">Want</option></select>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="f-date" value="${todayStr()}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field" style="flex:2;">
+          <label>Particular</label>
+          <input type="text" id="f-particular" placeholder="e.g. Big Bazaar grocery run">
+        </div>
+        <div class="field">
+          <label>Amount (₹)</label>
+          <input type="number" id="f-amount" min="0" step="1" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Category</label><select id="f-category"></select></div>
+        <div class="field"><label>Subcategory</label><select id="f-subcategory"></select></div>
+      </div>
+      <button class="btn btn-gold" id="saveEntryBtn">Save expense</button>
+    </div>
+  `;
+  const catSel = $("#f-category");
+  CATEGORY_NAMES.forEach(c => catSel.appendChild(new Option(c, c)));
+  function fillSubs(){
+    const subSel = $("#f-subcategory");
+    subSel.innerHTML = "";
+    TAXONOMY[catSel.value].subs.forEach(s => subSel.appendChild(new Option(s, s)));
+  }
+  catSel.addEventListener('change', fillSubs);
+  fillSubs();
+
+  $("#saveEntryBtn").addEventListener('click', async () => {
+    const date = $("#f-date").value;
+    const amount = parseFloat($("#f-amount").value);
+    const particular = $("#f-particular").value.trim();
+    if(!date || !amount || amount<=0){ showToast("Add a date and an amount greater than 0"); return; }
+    entries.push({
+      id: Date.now()+"-"+Math.random().toString(36).slice(2,7),
+      type: $("#f-type").value, date, particular, amount,
+      category: catSel.value, subcategory: $("#f-subcategory").value
+    });
+    await saveAll();
+    showToast("Expense saved");
+    $("#f-particular").value = ""; $("#f-amount").value = "";
+  });
+}
+
+/* ---------------- Render: Log ---------------- */
+function renderLog(){
+  const sorted = [...entries].sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  let rows = sorted.map(e => `
+    <tr>
+      <td><span class="badge ${e.type==='Need'?'need':'want'}">${e.type}</span></td>
+      <td>${e.date}</td>
+      <td>${e.particular || '<span style="color:#a59c7e">—</span>'}</td>
+      <td>${e.category}</td>
+      <td>${e.subcategory}</td>
+      <td class="num">${fmt(e.amount)}</td>
+      <td><button class="btn-danger" data-del="${e.id}">Delete</button></td>
+    </tr>
+  `).join('');
+  content.innerHTML = `
+    <div class="panel">
+      <h2>All entries (${entries.length})</h2>
+      ${entries.length ? `<table>
+        <thead><tr><th>Type</th><th>Date</th><th>Particular</th><th>Category</th><th>Subcategory</th><th>Amount</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>` : `<div class="empty">No expenses logged yet — add your first one on the "Add Expense" tab.</div>`}
+    </div>
+  `;
+  content.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      entries = entries.filter(e => e.id !== btn.dataset.del);
+      await saveAll();
+      renderLog();
+      showToast("Entry deleted");
+    });
+  });
+}
+
+/* ---------------- Render: Budgets ---------------- */
+function renderBudgets(){
+  let rows = CATEGORY_NAMES.map(c => `
+    <tr>
+      <td>${c}</td>
+      <td>
+        <select data-type="${c}">
+          <option value="Need" ${budgets[c].type==='Need'?'selected':''}>Need</option>
+          <option value="Want" ${budgets[c].type==='Want'?'selected':''}>Want</option>
+        </select>
+      </td>
+      <td><input type="number" data-budget="${c}" value="${budgets[c].budget}" min="0" step="100" style="width:120px; padding:6px 8px; border:1px solid var(--line); border-radius:5px; font-family:'IBM Plex Mono',monospace;"></td>
+    </tr>
+  `).join('');
+  content.innerHTML = `
+    <div class="panel">
+      <h2>Monthly budgets per category</h2>
+      <p class="hint">Set your target spend for each category. These drive the "Amount Left" figures on the Dashboard.</p>
+      <table><thead><tr><th>Category</th><th>Type</th><th>Monthly budget (₹)</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>
+  `;
+  content.querySelectorAll('[data-type]').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      budgets[sel.dataset.type].type = sel.value;
+      await saveAll();
+      showToast("Budget updated");
+    });
+  });
+  content.querySelectorAll('[data-budget]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      budgets[inp.dataset.budget].budget = parseFloat(inp.value)||0;
+      await saveAll();
+      showToast("Budget updated");
+    });
+  });
+}
+
+/* ---------------- Render: Dashboard ---------------- */
+function monthLabel(m){
+  const [y,mo] = m.split('-');
+  const d = new Date(parseInt(y), parseInt(mo)-1, 1);
+  return d.toLocaleDateString('en-US',{month:'long', year:'numeric'});
+}
+function renderDashboard(){
+  const month = monthPicker.value || thisMonth();
+  const spent = spentByCategory(month);
+  let totalSpent=0, totalBudget=0, totalLeft=0;
+  let rows = CATEGORY_NAMES.map(c => {
+    const s = spent[c]||0, b = budgets[c].budget, left = b - s;
+    totalSpent+=s; totalBudget+=b; totalLeft+=left;
+    return `<tr>
+      <td>${c}</td>
+      <td><span class="badge ${budgets[c].type==='Need'?'need':'want'}">${budgets[c].type}</span></td>
+      <td class="num">${fmt(s)}</td>
+      <td class="num">${fmt(b)}</td>
+      <td class="num ${left<0?'neg':'pos'}">${fmt(left)}</td>
+    </tr>`;
+  }).join('');
+
+  const monthEntries = entriesForMonth(month).sort((a,b)=> (b.date||"").localeCompare(a.date||"")).slice(0,25);
+  const tape = monthEntries.length ? monthEntries.map(e => `
+    <div class="tape-row">
+      <span>${e.particular || e.subcategory}<br><span class="t-cat">${e.category} · ${e.date}</span></span>
+      <span class="t-amt">${fmt(e.amount)}</span>
+    </div>
+  `).join('') : `<div class="empty" style="color:#8d96a0;">No transactions this month yet</div>`;
+
+  content.innerHTML = `
+    <div class="grid-2col">
+      <div class="panel">
+        <h2>Spending summary — ${monthLabel(month)}</h2>
+        <table>
+          <thead><tr><th>Category</th><th>Type</th><th>Spent</th><th>Budget</th><th>Left</th></tr></thead>
+          <tbody>
+            ${rows}
+            <tr class="total-row">
+              <td colspan="2">Total</td>
+              <td class="num">${fmt(totalSpent)}</td>
+              <td class="num">${fmt(totalBudget)}</td>
+              <td class="num ${totalLeft<0?'neg':'pos'}">${fmt(totalLeft)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tape-wrap">
+        <div class="tape-header">Ledger tape — recent</div>
+        <div class="tape">${tape}</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------------- Render: Breakdown ---------------- */
+function renderBreakdown(){
+  const month = monthPicker.value || thisMonth();
+  const subTotals = spentBySub(month);
+  const catTotals = spentByCategory(month);
+  let html = CATEGORY_NAMES.map(c => {
+    const open = openCats.has(c);
+    const subs = TAXONOMY[c].subs.map(s => `
+      <div class="bd-sub-row"><span>${s}</span><span class="s-amt">${fmt(subTotals[c][s])}</span></div>
+    `).join('');
+    return `
+      <div class="bd-category" data-cat="${c}">
+        <span class="name">${c}</span>
+        <span style="display:flex; align-items:center; gap:10px;">
+          <span class="num" style="font-weight:700;">${fmt(catTotals[c])}</span>
+          <span class="chev ${open?'open':''}">▶</span>
+        </span>
+      </div>
+      <div class="bd-subs" style="display:${open?'block':'none'};">${subs}</div>
+    `;
+  }).join('');
+  content.innerHTML = `<div class="panel"><h2>Breakdown by subcategory — ${monthLabel(month)}</h2>${html}</div>`;
+  content.querySelectorAll('.bd-category').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = el.dataset.cat;
+      openCats.has(c) ? openCats.delete(c) : openCats.add(c);
+      renderBreakdown();
+    });
+  });
+}
+
+function render(){
+  if(currentTab==='add') renderAdd();
+  else if(currentTab==='log') renderLog();
+  else if(currentTab==='budgets') renderBudgets();
+  else if(currentTab==='dashboard') renderDashboard();
+  else if(currentTab==='breakdown') renderBreakdown();
+}
+
+document.querySelectorAll('#tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentTab = btn.dataset.tab;
+    document.querySelectorAll('#tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+monthPicker.addEventListener('change', () => {
+  if(currentTab==='dashboard') renderDashboard();
+  if(currentTab==='breakdown') renderBreakdown();
+});
+
+$("#resetBtn").addEventListener('click', async () => {
+  if(!confirm("This clears all logged expenses and resets budgets to defaults. Continue?")) return;
+  entries = [];
+  budgets = {};
+  CATEGORY_NAMES.forEach(c => budgets[c] = {type: TAXONOMY[c].type, budget: 5000});
+  await saveAll();
+  render();
+  showToast("Data reset");
+});
+
+$("#exportBtn").addEventListener('click', () => {
+  const month = monthPicker.value || thisMonth();
+  const wb = XLSX.utils.book_new();
+
+  const logRows = [["Type","Date","Particular","Amount","Category","Subcategory"]];
+  entries.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(e=>{
+    logRows.push([e.type, e.date, e.particular, e.amount, e.category, e.subcategory]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(logRows), "Log");
+
+  const budgetRows = [["Category","Type","Monthly Budget"]];
+  CATEGORY_NAMES.forEach(c => budgetRows.push([c, budgets[c].type, budgets[c].budget]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(budgetRows), "Budget");
+
+  const spent = spentByCategory(month);
+  const dashRows = [["Category","Type","Spent This Month","Monthly Budget","Amount Left"]];
+  let ts=0, tb=0, tl=0;
+  CATEGORY_NAMES.forEach(c=>{
+    const s=spent[c]||0, b=budgets[c].budget, l=b-s;
+    ts+=s; tb+=b; tl+=l;
+    dashRows.push([c, budgets[c].type, s, b, l]);
+  });
+  dashRows.push(["Total","",ts,tb,tl]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dashRows), "Dashboard ("+month+")");
+
+  const subTotals = spentBySub(month);
+  const detRows = [["Category / Subcategory","Spent This Month"]];
+  CATEGORY_NAMES.forEach(c=>{
+    detRows.push([c, spent[c]||0]);
+    TAXONOMY[c].subs.forEach(s=> detRows.push(["    "+s, subTotals[c][s]||0]));
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detRows), "Subcategory Detail");
+
+  XLSX.writeFile(wb, "Expense_Logger_Export.xlsx");
+  showToast("Excel file downloaded");
+});
+
+async function init(){
+  content.innerHTML = `<div class="loading-note">Loading your ledger…</div>`;
+  monthPicker.value = thisMonth();
+  await loadData();
+  render();
+}
+</script>
+</body>
+</html>
