@@ -237,7 +237,7 @@ This copy is provided so you have a downloadable starting point.
       <span class="email-pill" id="userEmailPill"></span>
       <input type="month" id="monthPicker" class="month-input">
       <button class="btn btn-ghost" id="signOutBtn">Sign out</button>
-      <button class="btn btn-ghost" id="resetBtn">Reset data</button>
+      <!--<button class="btn btn-ghost" id="resetBtn">Reset data</button>-->
       <button class="btn btn-gold" id="exportBtn">Export to Excel</button>
     </div>
   </div>
@@ -668,7 +668,7 @@ monthPicker.addEventListener('change', () => {
   if(currentTab==='breakdown') renderBreakdown();
 });
 
-$("#resetBtn").addEventListener('click', async () => {
+/*$("#resetBtn").addEventListener('click', async () => {
   if(!confirm("This clears all logged expenses and resets budgets to defaults. Continue?")) return;
   entries = [];
   budgets = {};
@@ -676,7 +676,7 @@ $("#resetBtn").addEventListener('click', async () => {
   await saveAll();
   render();
   showToast("Data reset");
-});
+});*/
 
 $("#exportBtn").addEventListener('click', () => {
   const month = monthPicker.value || thisMonth();
