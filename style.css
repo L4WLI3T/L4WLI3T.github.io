@@ -175,7 +175,7 @@ button{font-family:'IBM Plex Sans',sans-serif; cursor:pointer;}
 .btn{border:none; border-radius:6px; padding:10px 16px; font-size:13px; font-weight:600; letter-spacing:.02em;}
 .btn-gold{background:var(--gold); color:#241405;}
 .btn-gold:hover{background:#dba042;}
-.btn-ghost{background:transparent; color:var(--paper-light); border:1px solid #4a525a;}
+.btn-ghost{background:transparent; color:var(--ink); border:1px solid #4a525a;}
 .btn-ghost:hover{border-color:var(--gold); color:var(--gold);}
 .btn-danger{background:transparent; color:var(--rust); border:1px solid var(--rust); padding:5px 10px; font-size:12px;}
 .btn-danger:hover{background:var(--rust); color:#fff;}
