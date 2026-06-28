@@ -48,8 +48,9 @@ const INCOME_CATEGORY_NAMES = Object.keys(INCOME_TAXONOMY);
 let entries = [];        // expenses
 let incomeEntries = [];  // income
 let budgets = {};
+let categoryConfig = {}; // { [category]: { enabled: bool, subs: { [sub]: bool } } }
 let currentMode = "expense"; // "expense" | "income"
-let currentTab = "add";      // expense tabs: add/log/budgets/dashboard/breakdown
+let currentTab = "add";      // expense tabs: add/log/budgets/dashboard/breakdown/categories
                               // income tabs: add/log/summary
 let openCats = new Set();
 let openIncomeCats = new Set();
@@ -59,6 +60,37 @@ let authMode = "signin"; // "signin" | "signup" | "forgot"
 const $ = sel => document.querySelector(sel);
 const content = $("#content");
 const monthPicker = $("#monthPicker");
+
+function defaultCategoryConfig(){
+  const cfg = {};
+  CATEGORY_NAMES.forEach(c => {
+    cfg[c] = { enabled: true, subs: {} };
+    TAXONOMY[c].subs.forEach(s => cfg[c].subs[s] = true);
+  });
+  return cfg;
+}
+function normalizeCategoryConfig(stored){
+  const cfg = stored ? JSON.parse(JSON.stringify(stored)) : {};
+  CATEGORY_NAMES.forEach(c => {
+    if(!cfg[c]) cfg[c] = { enabled: true, subs: {} };
+    if(typeof cfg[c].enabled !== "boolean") cfg[c].enabled = true;
+    if(!cfg[c].subs) cfg[c].subs = {};
+    TAXONOMY[c].subs.forEach(s => {
+      if(typeof cfg[c].subs[s] !== "boolean") cfg[c].subs[s] = true;
+    });
+  });
+  return cfg;
+}
+function effectiveCategories(){
+  return CATEGORY_NAMES.filter(c => categoryConfig[c] && categoryConfig[c].enabled);
+}
+function effectiveSubs(c){
+  if(!categoryConfig[c]) return TAXONOMY[c].subs;
+  return TAXONOMY[c].subs.filter(s => categoryConfig[c].subs[s]);
+}
+function effectiveCategoriesWithSubs(){
+  return effectiveCategories().filter(c => effectiveSubs(c).length > 0);
+}
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
@@ -155,15 +187,57 @@ function cleanFirebaseError(err){
   return (err.message || "Something went wrong").replace("Firebase: ","").replace(/\(auth\/.*\)\.?/,"").trim();
 }
 
-$("#signOutBtn").addEventListener('click', async () => { await signOut(auth); });
+/* ============================ Profile menu ============================ */
+function initialsFor(email){
+  if(!email) return "?";
+  const namePart = email.split('@')[0];
+  const cleaned = namePart.replace(/[^a-zA-Z]/g, '');
+  if(cleaned.length >= 2) return (cleaned[0] + cleaned[1]).toUpperCase();
+  if(cleaned.length === 1) return cleaned[0].toUpperCase();
+  return email[0].toUpperCase();
+}
+function formatDate(iso){
+  if(!iso) return "—";
+  return new Date(iso).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+}
+function populateProfile(user){
+  const init = initialsFor(user.email);
+  $("#profileBtn").textContent = init;
+  $("#profileAvatarLg").textContent = init;
+  $("#profileEmail").textContent = user.email;
+  $("#profileMemberSince").textContent = "Member since " + formatDate(user.metadata && user.metadata.creationTime);
+  $("#profileDetail").innerHTML = `
+    <div class="pd-row"><span>Email</span><span>${user.email}</span></div>
+    <div class="pd-row"><span>Joined</span><span>${formatDate(user.metadata && user.metadata.creationTime)}</span></div>
+    <div class="pd-row"><span>Last sign-in</span><span>${formatDate(user.metadata && user.metadata.lastSignInTime)}</span></div>
+    <div class="pd-row"><span>Expense entries</span><span>${entries.length}</span></div>
+    <div class="pd-row"><span>Income entries</span><span>${incomeEntries.length}</span></div>
+  `;
+}
+$("#profileBtn").addEventListener('click', (e) => {
+  e.stopPropagation();
+  $("#profileMenu").classList.toggle('hidden');
+});
+$("#profileInfoToggle").addEventListener('click', () => {
+  $("#profileDetail").classList.toggle('hidden');
+});
+document.addEventListener('click', (e) => {
+  const wrap = $("#profileWrap");
+  if(wrap && !wrap.contains(e.target)){
+    $("#profileMenu").classList.add('hidden');
+    $("#profileDetail").classList.add('hidden');
+  }
+});
+$("#menuSignOutBtn").addEventListener('click', async () => { await signOut(auth); });
 
 onAuthStateChanged(auth, async (user) => {
   if(user){
     currentUser = user;
     $("#authScreen").classList.add('hidden');
     $("#app").classList.remove('hidden');
-    $("#userEmailPill").textContent = user.email;
+    populateProfile(user);
     await init();
+    populateProfile(user); // refresh entry counts now that data is loaded
   }else{
     currentUser = null;
     $("#app").classList.add('hidden');
@@ -184,12 +258,15 @@ async function loadData(){
       entries = data.entries || [];
       incomeEntries = data.incomeEntries || [];
       budgets = data.budgets || null;
+      categoryConfig = normalizeCategoryConfig(data.categoryConfig);
     }else{
       entries = []; incomeEntries = []; budgets = null;
+      categoryConfig = defaultCategoryConfig();
     }
   }catch(e){
     console.error("load failed", e);
     entries = []; incomeEntries = []; budgets = null;
+    categoryConfig = defaultCategoryConfig();
     showToast("Couldn't load data — check your Firebase config/rules");
   }
   if(!budgets){
@@ -200,7 +277,7 @@ async function loadData(){
 }
 async function saveAll(){
   try{
-    await setDoc(userDocRef(), { entries, incomeEntries, budgets }, { merge: true });
+    await setDoc(userDocRef(), { entries, incomeEntries, budgets, categoryConfig }, { merge: true });
   }catch(e){
     console.error("save failed", e);
     showToast("Couldn't save — check your Firebase config/rules");
@@ -264,6 +341,7 @@ function renderTabs(){
       <button data-tab="budgets">Budgets</button>
       <button data-tab="dashboard">Dashboard</button>
       <button data-tab="breakdown">Breakdown</button>
+      <button data-tab="categories">Categories</button>
     `;
   }else{
     tabsEl.innerHTML = `
@@ -284,6 +362,18 @@ function renderTabs(){
 
 /* ============================ Render: Add Expense ============================ */
 function renderAddExpense(){
+  const cats = effectiveCategoriesWithSubs();
+  if(cats.length === 0){
+    content.innerHTML = `
+      ${renderModeSwitch()}
+      <div class="panel">
+        <h2>Add an expense</h2>
+        <div class="empty">No categories are selected yet. Go to the "Categories" tab to choose which ones you want to use.</div>
+      </div>
+    `;
+    bindModeSwitch();
+    return;
+  }
   content.innerHTML = `
     ${renderModeSwitch()}
     <div class="panel" style="max-width:640px;">
@@ -317,11 +407,11 @@ function renderAddExpense(){
   `;
   bindModeSwitch();
   const catSel = $("#f-category");
-  CATEGORY_NAMES.forEach(c => catSel.appendChild(new Option(c, c)));
+  cats.forEach(c => catSel.appendChild(new Option(c, c)));
   function fillSubs(){
     const subSel = $("#f-subcategory");
     subSel.innerHTML = "";
-    TAXONOMY[catSel.value].subs.forEach(s => subSel.appendChild(new Option(s, s)));
+    effectiveSubs(catSel.value).forEach(s => subSel.appendChild(new Option(s, s)));
   }
   catSel.addEventListener('change', fillSubs);
   fillSubs();
@@ -379,7 +469,8 @@ function renderLog(){
 
 /* ============================ Render: Budgets ============================ */
 function renderBudgets(){
-  let rows = CATEGORY_NAMES.map(c => `
+  const cats = effectiveCategories();
+  let rows = cats.map(c => `
     <tr>
       <td>${c}</td>
       <td>
@@ -395,7 +486,8 @@ function renderBudgets(){
     <div class="panel">
       <h2>Monthly budgets per category</h2>
       <p class="hint">Set your target spend for each category. These drive the "Amount Left" figures on the Dashboard.</p>
-      <div class="table-scroll"><table><thead><tr><th>Category</th><th>Type</th><th>Monthly budget (₹)</th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${cats.length ? `<div class="table-scroll"><table><thead><tr><th>Category</th><th>Type</th><th>Monthly budget (₹)</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        : `<div class="empty">No categories are selected yet. Go to the "Categories" tab to choose which ones you want to use.</div>`}
     </div>
   `;
   bindModeSwitch();
@@ -419,8 +511,9 @@ function renderBudgets(){
 function renderDashboard(){
   const month = monthPicker.value || thisMonth();
   const spent = spentByCategory(month);
+  const cats = effectiveCategories();
   let totalSpent=0, totalBudget=0, totalLeft=0;
-  let rows = CATEGORY_NAMES.map(c => {
+  let rows = cats.map(c => {
     const s = spent[c]||0, b = budgets[c].budget, left = b - s;
     totalSpent+=s; totalBudget+=b; totalLeft+=left;
     return `<tr>
@@ -445,7 +538,7 @@ function renderDashboard(){
     <div class="grid-2col">
       <div class="panel">
         <h2>Spending summary — ${monthLabel(month)}</h2>
-        <div class="table-scroll"><table>
+        ${cats.length ? `<div class="table-scroll"><table>
           <thead><tr><th>Category</th><th>Type</th><th>Spent</th><th>Budget</th><th>Left</th></tr></thead>
           <tbody>
             ${rows}
@@ -456,7 +549,7 @@ function renderDashboard(){
               <td class="num ${totalLeft<0?'neg':'pos'}">${fmt(totalLeft)}</td>
             </tr>
           </tbody>
-        </table></div>
+        </table></div>` : `<div class="empty">No categories are selected yet. Go to the "Categories" tab to choose which ones you want to use.</div>`}
       </div>
       <div class="tape-wrap">
         <div class="tape-header">Ledger tape — recent</div>
@@ -472,9 +565,10 @@ function renderBreakdown(){
   const month = monthPicker.value || thisMonth();
   const subTotals = spentBySub(month);
   const catTotals = spentByCategory(month);
-  let html = CATEGORY_NAMES.map(c => {
+  const cats = effectiveCategories();
+  let html = cats.map(c => {
     const open = openCats.has(c);
-    const subs = TAXONOMY[c].subs.map(s => `
+    const subs = effectiveSubs(c).map(s => `
       <div class="bd-sub-row"><span>${s}</span><span class="s-amt">${fmt(subTotals[c][s])}</span></div>
     `).join('');
     return `
@@ -485,9 +579,10 @@ function renderBreakdown(){
           <span class="chev ${open?'open':''}">▶</span>
         </span>
       </div>
-      <div class="bd-subs" style="display:${open?'block':'none'};">${subs}</div>
+      <div class="bd-subs" style="display:${open?'block':'none'};">${subs || '<div class="empty" style="padding:8px 0;">No subcategories selected for this category</div>'}</div>
     `;
   }).join('');
+  if(cats.length === 0) html = `<div class="empty">No categories are selected yet. Go to the "Categories" tab to choose which ones you want to use.</div>`;
   content.innerHTML = `${renderModeSwitch()}<div class="panel"><h2>Breakdown by subcategory — ${monthLabel(month)}</h2>${html}</div>`;
   bindModeSwitch();
   content.querySelectorAll('.bd-category').forEach(el => {
@@ -632,6 +727,73 @@ function renderIncomeSummary(){
   });
 }
 
+/* ============================ Render: Categories (selection) ============================ */
+function renderCategories(){
+  let rows = CATEGORY_NAMES.map(c => {
+    const enabled = categoryConfig[c].enabled;
+    const subs = TAXONOMY[c].subs.map(s => `
+      <label class="cat-sub-check">
+        <input type="checkbox" data-subcat="${c}" data-sub="${s}" ${categoryConfig[c].subs[s] ? 'checked':''} ${enabled?'':'disabled'}>
+        ${s}
+      </label>
+    `).join('');
+    return `
+      <div class="cat-select-row">
+        <label><input type="checkbox" data-catenable="${c}" ${enabled?'checked':''}> ${c}</label>
+      </div>
+      <div class="cat-subs-grid" style="${enabled?'':'opacity:.45;'}">${subs}</div>
+    `;
+  }).join('');
+
+  content.innerHTML = `
+    ${renderModeSwitch()}
+    <div class="panel">
+      <h2>Choose your categories</h2>
+      <p class="hint">Only checked categories/subcategories show up in Add Expense, Budgets, Dashboard, and Breakdown. Unchecked ones stay in your data as zero — nothing is deleted, you can re-enable them anytime.</p>
+      <div class="cat-toolbar">
+        <button class="btn btn-ghost" id="catSelectAll">Select all</button>
+        <button class="btn btn-ghost" id="catDeselectAll">Deselect all</button>
+      </div>
+      ${rows}
+    </div>
+  `;
+  bindModeSwitch();
+
+  content.querySelectorAll('[data-catenable]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      const c = chk.dataset.catenable;
+      categoryConfig[c].enabled = chk.checked;
+      await saveAll();
+      renderCategories();
+    });
+  });
+  content.querySelectorAll('[data-subcat]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      const c = chk.dataset.subcat, s = chk.dataset.sub;
+      categoryConfig[c].subs[s] = chk.checked;
+      await saveAll();
+      showToast("Categories updated");
+    });
+  });
+  $("#catSelectAll").addEventListener('click', async () => {
+    CATEGORY_NAMES.forEach(c => {
+      categoryConfig[c].enabled = true;
+      TAXONOMY[c].subs.forEach(s => categoryConfig[c].subs[s] = true);
+    });
+    await saveAll();
+    renderCategories();
+    showToast("All categories selected");
+  });
+  $("#catDeselectAll").addEventListener('click', async () => {
+    CATEGORY_NAMES.forEach(c => {
+      categoryConfig[c].enabled = false;
+    });
+    await saveAll();
+    renderCategories();
+    showToast("All categories deselected");
+  });
+}
+
 /* ============================ Main render dispatch ============================ */
 function render(){
   if(currentMode === "expense"){
@@ -640,6 +802,7 @@ function render(){
     else if(currentTab==='budgets') renderBudgets();
     else if(currentTab==='dashboard') renderDashboard();
     else if(currentTab==='breakdown') renderBreakdown();
+    else if(currentTab==='categories') renderCategories();
   }else{
     if(currentTab==='add') renderAddIncome();
     else if(currentTab==='log') renderIncomeLog();
@@ -664,26 +827,33 @@ $("#exportBtn").addEventListener('click', () => {
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(logRows), "Expense Log");
 
-  const budgetRows = [["Category","Type","Monthly Budget"]];
-  CATEGORY_NAMES.forEach(c => budgetRows.push([c, budgets[c].type, budgets[c].budget]));
+  const budgetRows = [["Category","Type","Monthly Budget","Selected"]];
+  CATEGORY_NAMES.forEach(c => budgetRows.push([c, budgets[c].type, categoryConfig[c].enabled ? budgets[c].budget : 0, categoryConfig[c].enabled ? "Yes" : "No"]));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(budgetRows), "Budget");
 
   const spent = spentByCategory(month);
-  const dashRows = [["Category","Type","Spent This Month","Monthly Budget","Amount Left"]];
+  const dashRows = [["Category","Type","Spent This Month","Monthly Budget","Amount Left","Selected"]];
   let ts=0, tb=0, tl=0;
   CATEGORY_NAMES.forEach(c=>{
-    const s=spent[c]||0, b=budgets[c].budget, l=b-s;
+    const selected = categoryConfig[c].enabled;
+    const s = selected ? (spent[c]||0) : 0;
+    const b = selected ? budgets[c].budget : 0;
+    const l = b - s;
     ts+=s; tb+=b; tl+=l;
-    dashRows.push([c, budgets[c].type, s, b, l]);
+    dashRows.push([c, budgets[c].type, s, b, l, selected ? "Yes" : "No"]);
   });
-  dashRows.push(["Total","",ts,tb,tl]);
+  dashRows.push(["Total","",ts,tb,tl,""]);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dashRows), "Dashboard ("+month+")");
 
   const subTotals = spentBySub(month);
-  const detRows = [["Category / Subcategory","Spent This Month"]];
+  const detRows = [["Category / Subcategory","Spent This Month","Selected"]];
   CATEGORY_NAMES.forEach(c=>{
-    detRows.push([c, spent[c]||0]);
-    TAXONOMY[c].subs.forEach(s=> detRows.push(["    "+s, subTotals[c][s]||0]));
+    const catSelected = categoryConfig[c].enabled;
+    detRows.push([c, catSelected ? (spent[c]||0) : 0, catSelected ? "Yes" : "No"]);
+    TAXONOMY[c].subs.forEach(s=>{
+      const subSelected = catSelected && categoryConfig[c].subs[s];
+      detRows.push(["    "+s, subSelected ? (subTotals[c][s]||0) : 0, subSelected ? "Yes" : "No"]);
+    });
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detRows), "Expense Subcategory Detail");
 
