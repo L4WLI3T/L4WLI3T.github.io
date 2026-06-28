@@ -49,12 +49,9 @@ let entries = [];        // expenses
 let incomeEntries = [];  // income
 let budgets = {};
 let categoryConfig = {}; // { [category]: { enabled: bool, subs: { [sub]: bool } } }
-let incomeCategoryConfig = {}; // same shape, for INCOME_TAXONOMY
-let userProfile = { firstName: "", lastName: "" };
 let currentMode = "expense"; // "expense" | "income"
-let currentTab = "add";      // expense tabs: add/log/budgets/dashboard/breakdown
+let currentTab = "add";      // expense tabs: add/log/budgets/dashboard/breakdown/categories
                               // income tabs: add/log/summary
-let viewMode = "app"; // "app" | "categories"
 let openCats = new Set();
 let openIncomeCats = new Set();
 let currentUser = null;
@@ -93,37 +90,6 @@ function effectiveSubs(c){
 }
 function effectiveCategoriesWithSubs(){
   return effectiveCategories().filter(c => effectiveSubs(c).length > 0);
-}
-
-function defaultIncomeCategoryConfig(){
-  const cfg = {};
-  INCOME_CATEGORY_NAMES.forEach(c => {
-    cfg[c] = { enabled: true, subs: {} };
-    INCOME_TAXONOMY[c].subs.forEach(s => cfg[c].subs[s] = true);
-  });
-  return cfg;
-}
-function normalizeIncomeCategoryConfig(stored){
-  const cfg = stored ? JSON.parse(JSON.stringify(stored)) : {};
-  INCOME_CATEGORY_NAMES.forEach(c => {
-    if(!cfg[c]) cfg[c] = { enabled: true, subs: {} };
-    if(typeof cfg[c].enabled !== "boolean") cfg[c].enabled = true;
-    if(!cfg[c].subs) cfg[c].subs = {};
-    INCOME_TAXONOMY[c].subs.forEach(s => {
-      if(typeof cfg[c].subs[s] !== "boolean") cfg[c].subs[s] = true;
-    });
-  });
-  return cfg;
-}
-function effectiveIncomeCategories(){
-  return INCOME_CATEGORY_NAMES.filter(c => incomeCategoryConfig[c] && incomeCategoryConfig[c].enabled);
-}
-function effectiveIncomeSubs(c){
-  if(!incomeCategoryConfig[c]) return INCOME_TAXONOMY[c].subs;
-  return INCOME_TAXONOMY[c].subs.filter(s => incomeCategoryConfig[c].subs[s]);
-}
-function effectiveIncomeCategoriesWithSubs(){
-  return effectiveIncomeCategories().filter(c => effectiveIncomeSubs(c).length > 0);
 }
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -222,12 +188,7 @@ function cleanFirebaseError(err){
 }
 
 /* ============================ Profile menu ============================ */
-function initialsFor(profile, email){
-  const fi = (profile.firstName||"").trim();
-  const li = (profile.lastName||"").trim();
-  if(fi || li){
-    return ((fi[0]||"") + (li[0]||"")).toUpperCase() || "?";
-  }
+function initialsFor(email){
   if(!email) return "?";
   const namePart = email.split('@')[0];
   const cleaned = namePart.replace(/[^a-zA-Z]/g, '');
@@ -235,24 +196,16 @@ function initialsFor(profile, email){
   if(cleaned.length === 1) return cleaned[0].toUpperCase();
   return email[0].toUpperCase();
 }
-function displayNameFor(profile, email){
-  const fi = (profile.firstName||"").trim();
-  const li = (profile.lastName||"").trim();
-  const full = [fi, li].filter(Boolean).join(" ");
-  return full || email;
-}
 function formatDate(iso){
   if(!iso) return "—";
   return new Date(iso).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
 }
 function populateProfile(user){
-  const init = initialsFor(userProfile, user.email);
+  const init = initialsFor(user.email);
   $("#profileBtn").textContent = init;
   $("#profileAvatarLg").textContent = init;
-  $("#profileEmail").textContent = displayNameFor(userProfile, user.email);
+  $("#profileEmail").textContent = user.email;
   $("#profileMemberSince").textContent = "Member since " + formatDate(user.metadata && user.metadata.creationTime);
-  $("#profileFirstName").value = userProfile.firstName || "";
-  $("#profileLastName").value = userProfile.lastName || "";
   $("#profileDetail").innerHTML = `
     <div class="pd-row"><span>Email</span><span>${user.email}</span></div>
     <div class="pd-row"><span>Joined</span><span>${formatDate(user.metadata && user.metadata.creationTime)}</span></div>
@@ -267,20 +220,6 @@ $("#profileBtn").addEventListener('click', (e) => {
 });
 $("#profileInfoToggle").addEventListener('click', () => {
   $("#profileDetail").classList.toggle('hidden');
-});
-$("#saveProfileNameBtn").addEventListener('click', async () => {
-  userProfile.firstName = $("#profileFirstName").value.trim();
-  userProfile.lastName = $("#profileLastName").value.trim();
-  await saveAll();
-  populateProfile(currentUser);
-  showToast("Name saved");
-});
-$("#menuCategoriesBtn").addEventListener('click', () => {
-  $("#profileMenu").classList.add('hidden');
-  $("#profileDetail").classList.add('hidden');
-  viewMode = "categories";
-  $("#tabs").innerHTML = "";
-  render();
 });
 document.addEventListener('click', (e) => {
   const wrap = $("#profileWrap");
@@ -298,7 +237,7 @@ onAuthStateChanged(auth, async (user) => {
     $("#app").classList.remove('hidden');
     populateProfile(user);
     await init();
-    populateProfile(user); // refresh name/entry counts now that data is loaded
+    populateProfile(user); // refresh entry counts now that data is loaded
   }else{
     currentUser = null;
     $("#app").classList.add('hidden');
@@ -320,20 +259,14 @@ async function loadData(){
       incomeEntries = data.incomeEntries || [];
       budgets = data.budgets || null;
       categoryConfig = normalizeCategoryConfig(data.categoryConfig);
-      incomeCategoryConfig = normalizeIncomeCategoryConfig(data.incomeCategoryConfig);
-      userProfile = data.profile || { firstName: "", lastName: "" };
     }else{
       entries = []; incomeEntries = []; budgets = null;
       categoryConfig = defaultCategoryConfig();
-      incomeCategoryConfig = defaultIncomeCategoryConfig();
-      userProfile = { firstName: "", lastName: "" };
     }
   }catch(e){
     console.error("load failed", e);
     entries = []; incomeEntries = []; budgets = null;
     categoryConfig = defaultCategoryConfig();
-    incomeCategoryConfig = defaultIncomeCategoryConfig();
-    userProfile = { firstName: "", lastName: "" };
     showToast("Couldn't load data — check your Firebase config/rules");
   }
   if(!budgets){
@@ -344,7 +277,7 @@ async function loadData(){
 }
 async function saveAll(){
   try{
-    await setDoc(userDocRef(), { entries, incomeEntries, budgets, categoryConfig, incomeCategoryConfig, profile: userProfile }, { merge: true });
+    await setDoc(userDocRef(), { entries, incomeEntries, budgets, categoryConfig }, { merge: true });
   }catch(e){
     console.error("save failed", e);
     showToast("Couldn't save — check your Firebase config/rules");
@@ -408,6 +341,7 @@ function renderTabs(){
       <button data-tab="budgets">Budgets</button>
       <button data-tab="dashboard">Dashboard</button>
       <button data-tab="breakdown">Breakdown</button>
+      <button data-tab="categories">Categories</button>
     `;
   }else{
     tabsEl.innerHTML = `
@@ -434,7 +368,7 @@ function renderAddExpense(){
       ${renderModeSwitch()}
       <div class="panel">
         <h2>Add an expense</h2>
-        <div class="empty">No categories are selected yet. Open your profile menu and choose "Manage categories" to pick which ones you want to use.</div>
+        <div class="empty">No categories are selected yet. Go to the "Categories" tab to choose which ones you want to use.</div>
       </div>
     `;
     bindModeSwitch();
@@ -553,7 +487,7 @@ function renderBudgets(){
       <h2>Monthly budgets per category</h2>
       <p class="hint">Set your target spend for each category. These drive the "Amount Left" figures on the Dashboard.</p>
       ${cats.length ? `<div class="table-scroll"><table><thead><tr><th>Category</th><th>Type</th><th>Monthly budget (₹)</th></tr></thead><tbody>${rows}</tbody></table></div>`
-        : `<div class="empty">No categories are selected yet. Open your profile menu and choose "Manage categories" to pick which ones you want to use.</div>`}
+        : `<div class="empty">No categories are selected yet. Go to the "Categories" tab to choose which ones you want to use.</div>`}
     </div>
   `;
   bindModeSwitch();
@@ -615,7 +549,7 @@ function renderDashboard(){
               <td class="num ${totalLeft<0?'neg':'pos'}">${fmt(totalLeft)}</td>
             </tr>
           </tbody>
-        </table></div>` : `<div class="empty">No categories are selected yet. Open your profile menu and choose "Manage categories" to pick which ones you want to use.</div>`}
+        </table></div>` : `<div class="empty">No categories are selected yet. Go to the "Categories" tab to choose which ones you want to use.</div>`}
       </div>
       <div class="tape-wrap">
         <div class="tape-header">Ledger tape — recent</div>
@@ -648,7 +582,7 @@ function renderBreakdown(){
       <div class="bd-subs" style="display:${open?'block':'none'};">${subs || '<div class="empty" style="padding:8px 0;">No subcategories selected for this category</div>'}</div>
     `;
   }).join('');
-  if(cats.length === 0) html = `<div class="empty">No categories are selected yet. Open your profile menu and choose "Manage categories" to pick which ones you want to use.</div>`;
+  if(cats.length === 0) html = `<div class="empty">No categories are selected yet. Go to the "Categories" tab to choose which ones you want to use.</div>`;
   content.innerHTML = `${renderModeSwitch()}<div class="panel"><h2>Breakdown by subcategory — ${monthLabel(month)}</h2>${html}</div>`;
   bindModeSwitch();
   content.querySelectorAll('.bd-category').forEach(el => {
@@ -662,18 +596,6 @@ function renderBreakdown(){
 
 /* ============================ Render: Add Income ============================ */
 function renderAddIncome(){
-  const cats = effectiveIncomeCategoriesWithSubs();
-  if(cats.length === 0){
-    content.innerHTML = `
-      ${renderModeSwitch()}
-      <div class="panel">
-        <h2>Add income</h2>
-        <div class="empty">No income categories are selected yet. Open your profile menu and choose "Manage categories" to pick which ones you want to use.</div>
-      </div>
-    `;
-    bindModeSwitch();
-    return;
-  }
   content.innerHTML = `
     ${renderModeSwitch()}
     <div class="panel" style="max-width:640px;">
@@ -703,11 +625,11 @@ function renderAddIncome(){
   `;
   bindModeSwitch();
   const catSel = $("#f-i-category");
-  cats.forEach(c => catSel.appendChild(new Option(c, c)));
+  INCOME_CATEGORY_NAMES.forEach(c => catSel.appendChild(new Option(c, c)));
   function fillSubs(){
     const subSel = $("#f-i-subcategory");
     subSel.innerHTML = "";
-    effectiveIncomeSubs(catSel.value).forEach(s => subSel.appendChild(new Option(s, s)));
+    INCOME_TAXONOMY[catSel.value].subs.forEach(s => subSel.appendChild(new Option(s, s)));
   }
   catSel.addEventListener('change', fillSubs);
   fillSubs();
@@ -767,13 +689,12 @@ function renderIncomeSummary(){
   const month = monthPicker.value || thisMonth();
   const catTotals = incomeByCategory(month);
   const subTotals = incomeBySub(month);
-  const cats = effectiveIncomeCategories();
   let total = 0;
-  cats.forEach(c => total += catTotals[c]||0);
+  Object.values(catTotals).forEach(v => total += v);
 
-  let html = cats.map(c => {
+  let html = INCOME_CATEGORY_NAMES.map(c => {
     const open = openIncomeCats.has(c);
-    const subs = effectiveIncomeSubs(c).map(s => `
+    const subs = INCOME_TAXONOMY[c].subs.map(s => `
       <div class="bd-sub-row"><span>${s}</span><span class="s-amt">${fmt(subTotals[c][s])}</span></div>
     `).join('');
     return `
@@ -784,10 +705,9 @@ function renderIncomeSummary(){
           <span class="chev ${open?'open':''}">▶</span>
         </span>
       </div>
-      <div class="bd-subs" style="display:${open?'block':'none'};">${subs || '<div class="empty" style="padding:8px 0;">No subcategories selected for this category</div>'}</div>
+      <div class="bd-subs" style="display:${open?'block':'none'};">${subs}</div>
     `;
   }).join('');
-  if(cats.length === 0) html = `<div class="empty">No income categories are selected yet. Open your profile menu and choose "Manage categories" to pick which ones you want to use.</div>`;
 
   content.innerHTML = `
     ${renderModeSwitch()}
@@ -807,56 +727,44 @@ function renderIncomeSummary(){
   });
 }
 
-/* ============================ Render: Category settings (Expense + Income) ============================ */
-function categorySectionHTML(sectionTitle, names, taxonomy, config, catAttr, subAttr){
-  let rows = names.map(c => {
-    const enabled = config[c].enabled;
-    const subs = taxonomy[c].subs.map(s => `
+/* ============================ Render: Categories (selection) ============================ */
+function renderCategories(){
+  let rows = CATEGORY_NAMES.map(c => {
+    const enabled = categoryConfig[c].enabled;
+    const subs = TAXONOMY[c].subs.map(s => `
       <label class="cat-sub-check">
-        <input type="checkbox" data-${subAttr}="${c}" data-sub="${s}" ${config[c].subs[s] ? 'checked':''} ${enabled?'':'disabled'}>
+        <input type="checkbox" data-subcat="${c}" data-sub="${s}" ${categoryConfig[c].subs[s] ? 'checked':''} ${enabled?'':'disabled'}>
         ${s}
       </label>
     `).join('');
     return `
       <div class="cat-select-row">
-        <label><input type="checkbox" data-${catAttr}="${c}" ${enabled?'checked':''}> ${c}</label>
+        <label><input type="checkbox" data-catenable="${c}" ${enabled?'checked':''}> ${c}</label>
       </div>
       <div class="cat-subs-grid" style="${enabled?'':'opacity:.45;'}">${subs}</div>
     `;
   }).join('');
-  return `
-    <div class="cat-section-title">${sectionTitle}</div>
-    <div class="cat-toolbar">
-      <button class="btn btn-ghost" data-selall="${catAttr}">Select all</button>
-      <button class="btn btn-ghost" data-deselall="${catAttr}">Deselect all</button>
-    </div>
-    ${rows}
-  `;
-}
 
-function renderCategorySettings(){
   content.innerHTML = `
-    <button class="back-link" id="catBackBtn">← Back</button>
+    ${renderModeSwitch()}
     <div class="panel">
-      <h2>Manage categories</h2>
-      <p class="hint">Only checked categories/subcategories show up in the Add forms, Budgets, Dashboard, and Breakdown. Unchecked ones stay in your data as zero — nothing is deleted, and you can re-enable them anytime.</p>
-      ${categorySectionHTML("Expense categories", CATEGORY_NAMES, TAXONOMY, categoryConfig, "catenable", "subcat")}
-      ${categorySectionHTML("Income categories", INCOME_CATEGORY_NAMES, INCOME_TAXONOMY, incomeCategoryConfig, "icatenable", "isubcat")}
+      <h2>Choose your categories</h2>
+      <p class="hint">Only checked categories/subcategories show up in Add Expense, Budgets, Dashboard, and Breakdown. Unchecked ones stay in your data as zero — nothing is deleted, you can re-enable them anytime.</p>
+      <div class="cat-toolbar">
+        <button class="btn btn-ghost" id="catSelectAll">Select all</button>
+        <button class="btn btn-ghost" id="catDeselectAll">Deselect all</button>
+      </div>
+      ${rows}
     </div>
   `;
-
-  $("#catBackBtn").addEventListener('click', () => {
-    viewMode = "app";
-    renderTabs();
-    render();
-  });
+  bindModeSwitch();
 
   content.querySelectorAll('[data-catenable]').forEach(chk => {
     chk.addEventListener('change', async () => {
       const c = chk.dataset.catenable;
       categoryConfig[c].enabled = chk.checked;
       await saveAll();
-      renderCategorySettings();
+      renderCategories();
     });
   });
   content.querySelectorAll('[data-subcat]').forEach(chk => {
@@ -867,67 +775,34 @@ function renderCategorySettings(){
       showToast("Categories updated");
     });
   });
-  content.querySelectorAll('[data-icatenable]').forEach(chk => {
-    chk.addEventListener('change', async () => {
-      const c = chk.dataset.icatenable;
-      incomeCategoryConfig[c].enabled = chk.checked;
-      await saveAll();
-      renderCategorySettings();
-    });
-  });
-  content.querySelectorAll('[data-isubcat]').forEach(chk => {
-    chk.addEventListener('change', async () => {
-      const c = chk.dataset.isubcat, s = chk.dataset.sub;
-      incomeCategoryConfig[c].subs[s] = chk.checked;
-      await saveAll();
-      showToast("Categories updated");
-    });
-  });
-
-  $('[data-selall="catenable"]').addEventListener('click', async () => {
+  $("#catSelectAll").addEventListener('click', async () => {
     CATEGORY_NAMES.forEach(c => {
       categoryConfig[c].enabled = true;
       TAXONOMY[c].subs.forEach(s => categoryConfig[c].subs[s] = true);
     });
     await saveAll();
-    renderCategorySettings();
-    showToast("All expense categories selected");
+    renderCategories();
+    showToast("All categories selected");
   });
-  $('[data-deselall="catenable"]').addEventListener('click', async () => {
-    CATEGORY_NAMES.forEach(c => { categoryConfig[c].enabled = false; });
-    await saveAll();
-    renderCategorySettings();
-    showToast("All expense categories deselected");
-  });
-  $('[data-selall="icatenable"]').addEventListener('click', async () => {
-    INCOME_CATEGORY_NAMES.forEach(c => {
-      incomeCategoryConfig[c].enabled = true;
-      INCOME_TAXONOMY[c].subs.forEach(s => incomeCategoryConfig[c].subs[s] = true);
+  $("#catDeselectAll").addEventListener('click', async () => {
+    CATEGORY_NAMES.forEach(c => {
+      categoryConfig[c].enabled = false;
     });
     await saveAll();
-    renderCategorySettings();
-    showToast("All income categories selected");
-  });
-  $('[data-deselall="icatenable"]').addEventListener('click', async () => {
-    INCOME_CATEGORY_NAMES.forEach(c => { incomeCategoryConfig[c].enabled = false; });
-    await saveAll();
-    renderCategorySettings();
-    showToast("All income categories deselected");
+    renderCategories();
+    showToast("All categories deselected");
   });
 }
 
 /* ============================ Main render dispatch ============================ */
 function render(){
-  if(viewMode === "categories"){
-    renderCategorySettings();
-    return;
-  }
   if(currentMode === "expense"){
     if(currentTab==='add') renderAddExpense();
     else if(currentTab==='log') renderLog();
     else if(currentTab==='budgets') renderBudgets();
     else if(currentTab==='dashboard') renderDashboard();
     else if(currentTab==='breakdown') renderBreakdown();
+    else if(currentTab==='categories') renderCategories();
   }else{
     if(currentTab==='add') renderAddIncome();
     else if(currentTab==='log') renderIncomeLog();
@@ -990,18 +865,14 @@ $("#exportBtn").addEventListener('click', () => {
 
   const incCat = incomeByCategory(month);
   const incSub = incomeBySub(month);
-  const incRows = [["Category / Subcategory","Income This Month","Selected"]];
+  const incRows = [["Category / Subcategory","Income This Month"]];
   let incTotal = 0;
   INCOME_CATEGORY_NAMES.forEach(c=>{
-    const catSelected = incomeCategoryConfig[c].enabled;
-    if(catSelected) incTotal += incCat[c]||0;
-    incRows.push([c, catSelected ? (incCat[c]||0) : 0, catSelected ? "Yes" : "No"]);
-    INCOME_TAXONOMY[c].subs.forEach(s=>{
-      const subSelected = catSelected && incomeCategoryConfig[c].subs[s];
-      incRows.push(["    "+s, subSelected ? (incSub[c][s]||0) : 0, subSelected ? "Yes" : "No"]);
-    });
+    incTotal += incCat[c]||0;
+    incRows.push([c, incCat[c]||0]);
+    INCOME_TAXONOMY[c].subs.forEach(s=> incRows.push(["    "+s, incSub[c][s]||0]));
   });
-  incRows.push(["Total", incTotal, ""]);
+  incRows.push(["Total", incTotal]);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(incRows), "Income Summary ("+month+")");
 
   XLSX.writeFile(wb, "Expense_Logger_Export.xlsx");
