@@ -50,10 +50,9 @@ Click **Publish**. This is what actually protects your data — without it, anyo
 - **Two new transaction types**: Investments and Savings, alongside Need/Want — available everywhere a Type appears (Add Expense form, Budgets, Dashboard, Log badges). The "Investments" category now defaults to type "Investments" rather than "Want".
 - **Mobile-friendly layout**: tables scroll horizontally on narrow screens, the top bar and tabs adapt, text/padding shrink slightly on phones.
 - **Income tracking**: a new Expense/Income switch at the top of the app. Income has its own categories (Wages, Other) and subcategories, its own Add/Log/Summary tabs, and its own sheet in the Excel export. It doesn't have budgets, since income isn't something you "spend down" — just a monthly total + category/subcategory breakdown.
-- **Profile menu**: the avatar circle in the top-right replaces the old sign-out button. Click it for your first/last name (editable right there, with a Save button), your email, when you joined, your last sign-in, your entry counts, and Sign out. The avatar shows the first letter of your first name + first letter of your last name once you've set them — falls back to initials from your email until you do.
-- **Category/subcategory selection — now in the profile menu**: click "Manage categories" in the profile dropdown to get one combined screen for both **Expense categories** and **Income categories**, each with their own check/uncheck list and Select all / Deselect all buttons. Add Expense, Budgets, Dashboard, Breakdown, Add Income, and Income Summary only show what you've selected. Nothing is deleted when you uncheck something — it's just held at 0 and excluded from totals, and the Excel export still lists every category/subcategory (with a "Selected" column) so the full picture is always there if you need it.
 
 ## Notes
 - Firebase's free "Spark" tier covers this kind of personal use comfortably.
 - "Export to Excel" still works entirely in your browser — no Firebase involved, and now includes both Expense and Income sheets.
 - If something doesn't load, open your browser's dev console (F12) — Firebase will print a clear error if the config or rules are wrong.
+
