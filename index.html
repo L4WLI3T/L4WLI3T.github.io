@@ -38,10 +38,25 @@
       <span class="tag">Tracker</span>
     </div>
     <div class="top-actions">
-      <span class="email-pill" id="userEmailPill"></span>
       <input type="month" id="monthPicker" class="month-input">
-      <button class="btn btn-ghost" id="signOutBtn">Sign out</button>
       <button class="btn btn-gold" id="exportBtn">Export to Excel</button>
+      <div class="profile-wrap" id="profileWrap">
+        <button class="profile-avatar" id="profileBtn" aria-label="Account menu">?</button>
+        <div class="profile-menu hidden" id="profileMenu">
+          <div class="profile-menu-header">
+            <div class="profile-avatar-lg" id="profileAvatarLg">?</div>
+            <div class="profile-info">
+              <div class="profile-email" id="profileEmail"></div>
+              <div class="profile-meta" id="profileMemberSince"></div>
+            </div>
+          </div>
+          <div class="profile-menu-divider"></div>
+          <div class="profile-menu-item" id="profileInfoToggle">Profile info</div>
+          <div class="profile-detail hidden" id="profileDetail"></div>
+          <div class="profile-menu-divider"></div>
+          <button class="profile-menu-item profile-menu-signout" id="menuSignOutBtn">Sign out</button>
+        </div>
+      </div>
     </div>
   </div>
 
